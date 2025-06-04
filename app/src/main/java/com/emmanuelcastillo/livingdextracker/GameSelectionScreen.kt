@@ -78,82 +78,13 @@ fun GameSelectionScreen(navController: NavController, modifier: Modifier = Modif
     val filteredGames by viewModel.filteredGames.collectAsState()
     val numCaughtMap by viewModel.numCaughtMap.collectAsState()
 
-    val filterGamesByGen = { genNum: Int? -> viewModel.filterByGeneration(genNum)}
-
-    when (configuration.orientation) {
-        Configuration.ORIENTATION_LANDSCAPE -> {
-            GameSelectionLandscapeScreen(
-                navController, filteredGames = filteredGames, numCaughtMap = numCaughtMap,
-                filterByGameGen = filterGamesByGen
-            )
-        }
-        else -> GameSelectionPortraitScreen(navController)
-    }
-}
-
-@Composable
-fun GameSelectionLandscapeScreen(navController: NavController, modifier: Modifier = Modifier, filteredGames: List<PokemonGame>, filterByGameGen: (Int?) -> Unit, numCaughtMap: Map<Int, NumCaughtAndTotal>) {
     var filterMenuExpanded by remember { mutableStateOf(false) }
 
     Surface(modifier = modifier.fillMaxSize()) {
-//        FadingText("LivingDex Tracker")
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            filteredGames.let {
-                Box(modifier = Modifier.align(Alignment.Start)) {
-                    IconButton(onClick = { filterMenuExpanded = !filterMenuExpanded }) {
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = "Filter Games")
-                    }
-                    DropdownMenu(
-                        expanded = filterMenuExpanded,
-                        onDismissRequest = { filterMenuExpanded = false },
-                        offset = DpOffset(8.dp, 0.dp)
-                    ) {
-                        DropdownMenuItem(
-                            { Text("All") },
-                            onClick = {
-                                filterByGameGen(null)
-                                filterMenuExpanded = false
-                            },
-                        )
-                        for (i in 1..9) {
-                            DropdownMenuItem(
-                                { Text("Gen ${i}") },
-                                onClick = {
-                                    filterByGameGen(i)
-                                    filterMenuExpanded = false
-                                },
-                            )
-                        }
-                    }
-                }
 
-                GameCarousel(
-                    numCaughtMap,
-                    it,
-                    navController,
-                    380.dp
-                )
-            }
-//            Button(onClick = { navController.navigate("settings") }) { Text("Settings") }
+        if (configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            FadingText("LivingDex Tracker")
         }
-    }
-}
-
-@Composable
-fun GameSelectionPortraitScreen(navController: NavController, modifier: Modifier = Modifier) {
-    var filterMenuExpanded by remember { mutableStateOf(false) }
-
-
-    val viewModel: GameSelectionViewModel = viewModel()
-    val filteredGames by viewModel.filteredGames.collectAsState()
-    val numCaughtMap by viewModel.numCaughtMap.collectAsState()
-
-    Surface(modifier = modifier.fillMaxSize()) {
-        FadingText("LivingDex Tracker")
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Center,
@@ -187,25 +118,23 @@ fun GameSelectionPortraitScreen(navController: NavController, modifier: Modifier
                         }
                     }
                 }
+
                 GameCarousel(
                     numCaughtMap,
                     it,
                     navController,
-                    80.dp
                 )
             }
-            Button(onClick = { navController.navigate("settings") }) { Text("Settings") }
+//            Button(onClick = { navController.navigate("settings") }) { Text("Settings") }
         }
     }
 }
-
 
 @Composable
 fun GameCarousel(
     numCaughtMap: Map<Int, NumCaughtAndTotal>,
     games: List<PokemonGame>,
     navController: NavController,
-    lazyRowPaddingValue: Dp
 ) {
 //    A state object that can be hoisted to control and observe scrolling.
 //    In most cases, this will be created via rememberLazyListState.
@@ -218,6 +147,16 @@ fun GameCarousel(
         navController.navigate("game/" + endpoint)
     }
 
+    val configuration = LocalConfiguration.current
+
+    // Default values for portrait mode
+    var horizontalPaddingValue = 80.dp
+
+    when (configuration.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> horizontalPaddingValue = 380.dp
+        else -> horizontalPaddingValue = 80.dp
+    }
+
     // If game carousel gets filtered, scroll back to the first game
     LaunchedEffect(games) {
         listState.scrollToItem(0)
@@ -226,7 +165,7 @@ fun GameCarousel(
     LazyRow(
         state = listState,
         flingBehavior = snappingLayout,
-        contentPadding = PaddingValues(horizontal = lazyRowPaddingValue),
+        contentPadding = PaddingValues(horizontal = horizontalPaddingValue),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -300,15 +239,20 @@ fun GamePosterItem(
 
     // Default portrait values
     var posterSize = Pair(350.dp, 240.dp)
+    var scaleFactor = 1.2f
 
     when (configuration.orientation) {
-        Configuration.ORIENTATION_LANDSCAPE -> posterSize = Pair(210.dp, 145.dp)
+        Configuration.ORIENTATION_LANDSCAPE -> {
+            posterSize = Pair(210.dp, 145.dp)
+            scaleFactor = 1.4f
+        }
+
         else -> posterSize = Pair(350.dp, 240.dp)
     }
 
     // Scaling the poster item if focused
     val scale by animateFloatAsState(
-        targetValue = if (isFocused) 1.2f else 1f,
+        targetValue = if (isFocused) scaleFactor else 1f,
         label = "ScaleAnimation"
     )
 
@@ -360,8 +304,7 @@ fun GamePosterItem(
                 bitmap = it,
                 contentDescription = imageFileName,
             )
-        } ?:
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     }

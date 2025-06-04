@@ -1,5 +1,6 @@
 import android.annotation.SuppressLint
 import android.app.Application
+import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -7,6 +8,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
@@ -34,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +61,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun LivingDexScreen(navController: NavController, gameId: Int) {
 
+    val configuration = LocalConfiguration.current
+
     // View Models (grabbing living dex, and acquire user caught pokemon for particular game)
     val pokedexModel: LivingDexViewModel = viewModel(
         factory = LivingDexViewModelFactory(
@@ -64,8 +70,6 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
             gameId = gameId
         )
     )
-
-    var grabbedEncounters by rememberSaveable { mutableStateOf(false) }
 
     // States from the view model
     val game by pokedexModel.game.collectAsState()
@@ -97,44 +101,29 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
         }
     }
 
-    // Grabbing encounters
-//    LaunchedEffect(pokedex, game) {
-//        // Runs only if game encounters for specific pokedex are not set
-//        // Need livingDexList to be set in order to populate encounters (w/ pokemon ids) into db (foreign key constraints)
-//        if ((game != null) and (pokedex != null)) {
-//            val pokedexId = game?.pokedexId
-//            val sharedPrefs = context.getSharedPreferences("app_prefs", MODE_PRIVATE)
-//            grabbedEncounters =
-//                sharedPrefs.getBoolean("populatedEncountersForPokedex#${pokedexId}", false)
-//            Log.d(
-//                "LivingDexScreen",
-//                "Encounters grabbed for Pokedex #${pokedexId}? ${grabbedEncounters}"
-//            )
-//            if (!grabbedEncounters) {
-//                Log.d("LivingDexScreen", "Populating encounters for Pokedex #${pokedexId}")
-//                pokedexId?.let {
-//                    populateEncountersToDatabase(context, pokedexId)
-//                    grabbedEncounters = true
-//                }
-//            }
-//        }
-//    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
     ) {
-        if (screenReady) {
+        if (screenReady and (configuration.orientation == Configuration.ORIENTATION_PORTRAIT)) {
             game?.let { GetGameBackground(it) }
         }
 
         Column {
+
+            var paddingValues: PaddingValues
+            when (configuration.orientation) {
+                Configuration.ORIENTATION_LANDSCAPE -> paddingValues =
+                    PaddingValues(horizontal = 60.dp, vertical = 20.dp)
+
+                else -> paddingValues = PaddingValues(20.dp)
+            }
             Row(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(15.dp)
             ) {
                 Button(onClick = { navController.navigate("home") }) {
                     Text("Go back")
@@ -170,20 +159,30 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
                     val removeFromSet = { pokemonGameEntryId: Int ->
                         pokedexModel.removeFromCopySet(pokemonGameEntryId)
                     }
-                    PokemonGrid(
-                        it,
-                        copyCapturedPokemonSet,
-                        navController,
-                        selectable,
-                        gameId,
-                        addToSet,
-                        removeFromSet,
-                    )
+                    Box(
+                        Modifier
+                            .padding(paddingValues)
+                            .border(2.dp, Color.Black, RoundedCornerShape(8.dp))
+                    ) {
+                        PokemonGrid(
+                            it,
+                            copyCapturedPokemonSet,
+                            navController,
+                            selectable,
+                            gameId,
+                            addToSet,
+                            removeFromSet,
+                        )
+                    }
+
                 }
             } else {
                 val loadingBody = @Composable {
                     if (fetchingDataStatus is DataStatus.Error) {
-                        Text((fetchingDataStatus as DataStatus.Error).message, textAlign = TextAlign.Center)
+                        Text(
+                            (fetchingDataStatus as DataStatus.Error).message,
+                            textAlign = TextAlign.Center
+                        )
                         Spacer(Modifier.size(16.dp))
                         Button(onClick = {
                             pokedexModel.grabAllData(gameId)
@@ -207,7 +206,7 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
                                             Text(key)
                                             Spacer(Modifier.width(4.dp))
                                             Text(
-                                                text = "........................................",
+                                                text = ".".repeat(100),
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Clip,
                                                 modifier = Modifier.weight(1f)
@@ -225,6 +224,7 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
                                 }
 
                             }
+
                             is DataStatus.Done -> Text("Loading Data...")
                             else -> {}
                         }
