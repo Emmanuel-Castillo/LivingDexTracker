@@ -8,7 +8,6 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
-import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -21,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,10 +53,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.emmanuelcastillo.livingdextracker.ui.composables.GalarMap
@@ -65,10 +64,10 @@ import com.emmanuelcastillo.livingdextracker.ui.composables.HisuiMap
 import com.emmanuelcastillo.livingdextracker.ui.composables.KantoMap
 import com.emmanuelcastillo.livingdextracker.ui.composables.PaldeaMap
 import com.emmanuelcastillo.livingdextracker.ui.composables.SinnohMap
-import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonWithVariants
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.EncounterDetails
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.PokemonDataStatus
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.PokemonViewModel
+import com.emmanuelcastillo.livingdextracker.utils.viewmodel.PokemonWithFormattedData
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.factories.PokemonViewModelFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -100,7 +99,6 @@ fun PokemonScreen(
     val fetchingDataStatus by pokemonViewModel.fetchingDataStatus.collectAsState()
     val screenReady by pokemonViewModel.screenReady.collectAsState()
     val startingGradiantColor by pokemonViewModel.startingGradiantColor.collectAsState()
-
     var playCry by rememberSaveable { mutableStateOf(true) }
 
     Box(
@@ -110,9 +108,10 @@ fun PokemonScreen(
 
         if (screenReady) {
             // Background Gradiant
+            val endingGradientColor = if (isSystemInDarkTheme()) Color.Black else Color.White
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val gradiant = Brush.verticalGradient(
-                    colors = listOf(startingGradiantColor, Color.White),
+                    colors = listOf(startingGradiantColor, endingGradientColor),
                     startY = 0f,
                     endY = Float.POSITIVE_INFINITY // Ensures it extends to the bottom
                 )
@@ -161,9 +160,6 @@ fun PokemonScreen(
                     Configuration.ORIENTATION_LANDSCAPE -> DisplayPokemonInfoLandscape(
                         pokemon!!,
                         pokemonViewModel = pokemonViewModel,
-                        gameId = gameId,
-                        encounterLocationsList = encounterLocationsList,
-                        focusedLocations = focusedLocations,
                         pokemonEncounters = pokemonEncounters
                     )
 
@@ -214,46 +210,12 @@ fun PokemonScreen(
 
 @Composable
 fun DisplayPokemonInfoLandscape(
-    pokemon: PokemonWithVariants,
+    pokemon: PokemonWithFormattedData,
     pokemonViewModel: PokemonViewModel,
-    gameId: Int,
-    encounterLocationsList: List<String>,
-    focusedLocations: List<String>,
     pokemonEncounters: EncounterDetails?
 ) {
-// Night mode mods
+    // Night mode mods
     val rowBackgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White
-
-    // Grab details from Pokemon
-    val id = pokemon.nationalDexId
-    val name = pokemon.variantName
-
-    val heightMeters = pokemon.heightDecimetres.div(10.0)
-        .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
-    val heightTotalInches = heightMeters.times(39.37).roundToInt()
-    val heightFeet = heightTotalInches.div(12)
-    val heightInches = heightTotalInches.mod(12)
-
-    val weightKilograms = pokemon.weightHectograms.div(10.00)
-        .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
-    val weightPounds = weightKilograms.times(2.205)
-        .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
-
-    val types = mutableListOf(pokemon.type1)
-    pokemon.type2?.let { types.add(it) }
-
-    val abilities = mutableListOf(pokemon.ability1)
-    pokemon.ability2?.let { abilities.add(it) }
-    pokemon.hiddenAbility?.let { abilities.add(it) }
-
-    val stats = listOf(
-        Pair("HP", pokemon.hpBaseStat),
-        Pair("Attack", pokemon.atkBaseStat),
-        Pair("Defense", pokemon.defBaseStat),
-        Pair("Sp. Attack", pokemon.spAtkBaseStat),
-        Pair("Sp. Defense", pokemon.spDefBaseStat),
-        Pair("Speed", pokemon.speedBaseStat),
-    )
 
     Row(modifier = Modifier.fillMaxWidth()) {
         val infoBoxModifier = Modifier
@@ -281,16 +243,15 @@ fun DisplayPokemonInfoLandscape(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row {
-                // Name and image
+                // com.emmanuelcastillo.livingdextracker.utils.api.Name and image
                 Column(
                     modifier = Modifier.fillMaxWidth(.4f),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    GetPokemonImage(id, pokemon.rvId)
+                    GetPokemonImage(pokemon.nationalDexId, pokemon.rvId)
                     Text(
-                        "#$id: $name",
+                        "#${pokemon.nationalDexId}: ${pokemon.variantName}",
                         fontSize = 16.sp,
-                        color = Color.Black
                     )
                 }
 
@@ -309,7 +270,7 @@ fun DisplayPokemonInfoLandscape(
                                 modifier = Modifier.padding(8.dp)
                             ) {
                                 Text("Types:")
-                                types.forEach { it ->
+                                pokemon.types.forEach { it ->
                                     TypeIcon(it)
                                 }
                             }
@@ -318,10 +279,8 @@ fun DisplayPokemonInfoLandscape(
                                 modifier = Modifier.padding(8.dp)
                             ) {
                                 Text("Abilities:")
-                                abilities.forEach { it ->
-                                    val ability = it.split("-")
-                                        .joinToString(" ") { it0 -> it0.replaceFirstChar { it.uppercaseChar() } }
-                                    Text(ability)
+                                pokemon.abilities.forEach { it ->
+                                    Text(it)
                                 }
                             }
 
@@ -337,16 +296,16 @@ fun DisplayPokemonInfoLandscape(
                                 modifier = Modifier.padding(8.dp)
                             ) {
                                 Text("Height:")
-                                Text(heightMeters.toString() + "m")
-                                Text(heightFeet.toString() + "ft " + heightInches.toString() + "in")
+                                Text(pokemon.heightMetric)
+                                Text(pokemon.heightImperial)
                             }
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.padding(8.dp)
                             ) {
                                 Text("Weight:")
-                                Text(weightKilograms.toString() + "kg")
-                                Text(weightPounds.toString() + "lbs")
+                                Text(pokemon.weightMetric)
+                                Text(pokemon.weightImperial)
                             }
                         }
                     }
@@ -367,7 +326,7 @@ fun DisplayPokemonInfoLandscape(
                 Column(
                     modifier = infoRowModifier.padding(16.dp, 8.dp)
                 ) {
-                    PokemonBaseStats(stats)
+                    PokemonBaseStats(pokemon.stats)
                 }
 
                 // Display Pokemon Locations
@@ -407,7 +366,7 @@ fun DisplayPokemonInfoLandscape(
 
 @Composable
 fun DisplayPokemonInfoPortrait(
-    pokemon: PokemonWithVariants,
+    pokemon: PokemonWithFormattedData,
     pokemonViewModel: PokemonViewModel,
     gameId: Int,
     encounterLocationsList: List<String>,
@@ -417,51 +376,19 @@ fun DisplayPokemonInfoPortrait(
     // Night mode mods
     val rowBackgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White
 
-    // Grab details from Pokemon
-    val id = pokemon.nationalDexId
-    val name = pokemon.variantName
-
-    val heightMeters = pokemon.heightDecimetres.div(10.0)
-        .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
-    val heightTotalInches = heightMeters.times(39.37).roundToInt()
-    val heightFeet = heightTotalInches.div(12)
-    val heightInches = heightTotalInches.mod(12)
-
-    val weightKilograms = pokemon.weightHectograms.div(10.00)
-        .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
-    val weightPounds = weightKilograms.times(2.205)
-        .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
-
-    val types = mutableListOf(pokemon.type1)
-    pokemon.type2?.let { types.add(it) }
-
-    val abilities = mutableListOf(pokemon.ability1)
-    pokemon.ability2?.let { abilities.add(it) }
-    pokemon.hiddenAbility?.let { abilities.add(it) }
-
-    val stats = listOf(
-        Pair("HP", pokemon.hpBaseStat),
-        Pair("Attack", pokemon.atkBaseStat),
-        Pair("Defense", pokemon.defBaseStat),
-        Pair("Sp. Attack", pokemon.spAtkBaseStat),
-        Pair("Sp. Defense", pokemon.spDefBaseStat),
-        Pair("Speed", pokemon.speedBaseStat),
-    )
-
     LazyColumn(horizontalAlignment = Alignment.CenterHorizontally) {
 
-        item { // Display Pokemon Sprite and Name
+        item { // Display Pokemon Sprite and com.emmanuelcastillo.livingdextracker.utils.api.Name
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    GetPokemonImage(id, pokemon.rvId)
+                    GetPokemonImage(pokemon.nationalDexId, pokemon.rvId)
                     Text(
-                        "#$id: $name",
+                        "#${pokemon.nationalDexId}: ${pokemon.variantName}",
                         modifier = Modifier.padding(vertical = 16.dp),
                         fontSize = 24.sp,
-                        color = Color.Black
                     )
                 }
 
@@ -489,16 +416,16 @@ fun DisplayPokemonInfoPortrait(
                     modifier = Modifier.padding(8.dp)
                 ) {
                     Text("Height:")
-                    Text(heightMeters.toString() + "m")
-                    Text(heightFeet.toString() + "ft " + heightInches.toString() + "in")
+                    Text(pokemon.heightMetric)
+                    Text(pokemon.heightImperial)
                 }
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(8.dp)
                 ) {
                     Text("Weight:")
-                    Text(weightKilograms.toString() + "kg")
-                    Text(weightPounds.toString() + "lbs")
+                    Text(pokemon.weightMetric)
+                    Text(pokemon.weightImperial)
                 }
             }
         }
@@ -513,7 +440,7 @@ fun DisplayPokemonInfoPortrait(
                     modifier = Modifier.padding(8.dp)
                 ) {
                     Text("Types:")
-                    types.forEach { it ->
+                    pokemon.types.forEach { it ->
                         TypeIcon(it)
                     }
                 }
@@ -522,10 +449,8 @@ fun DisplayPokemonInfoPortrait(
                     modifier = Modifier.padding(8.dp)
                 ) {
                     Text("Abilities:")
-                    abilities.forEach { it ->
-                        val ability = it.split("-")
-                            .joinToString(" ") { it0 -> it0.replaceFirstChar { it.uppercaseChar() } }
-                        Text(ability)
+                    pokemon.abilities.forEach { it ->
+                        Text(it)
                     }
                 }
             }
@@ -536,7 +461,7 @@ fun DisplayPokemonInfoPortrait(
             Column(
                 modifier = rowModifier.padding(vertical = 8.dp, horizontal = 16.dp)
             ) {
-                PokemonBaseStats(stats)
+                PokemonBaseStats(pokemon.stats)
             }
 
         }
@@ -595,11 +520,11 @@ fun GetPokemonImage(pokemonId: Int, rvId: Int) {
     val size = 180.dp
     var fileName = "pokemon_sprites/${
         pokemonId
-    }.png"
+    }.webp"
     if (rvId != 1) {
         fileName = "pokemon_sprites/${
             pokemonId
-        }-${rvId}.png"
+        }-${rvId}.webp"
     }
     val context = LocalContext.current
     val imageBitmap = remember {
@@ -660,32 +585,42 @@ fun PokemonStat(
             .clip(CircleShape)
             .background(
                 if (isSystemInDarkTheme()) {
-                    Color(0xFF505050)
-                } else {
-                    Color.LightGray
-                }
-            )
+                    Color.Black
+                } else
+                Color(0xFF505050)
+            ) // Base background
     ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        // Progress background layer
+        Box(
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(curPercent.value)
                 .clip(CircleShape)
                 .background(statColor)
-                .padding(horizontal = 8.dp)
+        )
+
+        // Foreground content (text labels)
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = statName,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
+
             Text(
                 text = (curPercent.value * statMaxValue).toInt().toString(),
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
     }
+
 }
 
 @Composable
@@ -708,12 +643,13 @@ fun PokemonBaseStats(
                 statName = stat.first,
                 statValue = stat.second,
                 statMaxValue = maxBaseStat,
-                statColor = Color.Black,
+                statColor = if (isSystemInDarkTheme()) {
+                    Color.DarkGray
+                } else
+                    Color.Black,
                 animDelay = i * animDelayPerItem
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
-
-

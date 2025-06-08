@@ -1,8 +1,5 @@
 package com.emmanuelcastillo.livingdextracker.utils.api
 
-import PokedexResponse
-import PokemonResponse
-import PokemonSpeciesResponse
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Path

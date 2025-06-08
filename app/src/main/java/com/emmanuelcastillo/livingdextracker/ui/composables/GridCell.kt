@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
+import com.emmanuelcastillo.livingdextracker.GetPokemonImage
 import com.emmanuelcastillo.livingdextracker.R
 
 @Composable
@@ -29,9 +30,12 @@ fun GridCell(
     selectable: Boolean,
     captured: Boolean,
 
+
     // notifies the parent when a pokemon is checked/unchecked
     onCheckChange: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    pokemonId: Int,
+    pokemonRvId: Int,
 ) {
     val cellBackgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White
 
@@ -66,6 +70,7 @@ fun GridCell(
             }) {
 
             var isLoading by remember { mutableStateOf(true) }
+            var showResourceImg by remember { mutableStateOf(false) }
 
             if (isLoading) {
                 Image(
@@ -75,11 +80,19 @@ fun GridCell(
                 )
             }
 
+            if (showResourceImg) {
+                GetPokemonImage(
+                    pokemonId = pokemonId,
+                    rvId = pokemonRvId
+                )
+            }
+
             AsyncImage(
                 model = spriteUrl,
                 contentDescription = name,
                 modifier = Modifier.matchParentSize(),
-                onSuccess = { isLoading = false }
+                onSuccess = { isLoading = false },
+                onError = { showResourceImg = true}
             )
         }
 }

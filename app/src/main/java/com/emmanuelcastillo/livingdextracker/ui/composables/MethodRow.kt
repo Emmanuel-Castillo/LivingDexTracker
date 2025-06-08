@@ -50,7 +50,6 @@ fun MethodRow(method: Map.Entry<String, MutableList<MethodDetails>>) {
             fontSize = 16.sp
         )
         for (methodDetail in methodDetails) {
-
 //                Box(
 //                    modifier = Modifier
 //                        .fillMaxWidth()

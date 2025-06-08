@@ -13,41 +13,7 @@ fun HisuiMap(
     focusedLocations: List<String>
 ) {
 
-    val MARKER_SIZE = 16.dp
     // Fixed map markers of routes, cities, etc.
-    val hisuiLocationMarkers = listOf(
-        MapMarker(
-            "Jubilife Village",
-            Offset(316.75943f, 342.6739f),
-            MarkerShapeClass.MARKER
-        ),
-        MapMarker(
-            "Obsidian Fieldlands",
-            Offset(423.77463f, 448.73718f),
-            MarkerShapeClass.MARKER
-        ),
-        MapMarker(
-            "Coronet Highlands",
-            Offset(519.96094f, 284.98535f),
-            MarkerShapeClass.MARKER
-        ),
-        MapMarker(
-            "Crimson Mirelands",
-            Offset(734.7662f, 392.77347f),
-            MarkerShapeClass.MARKER
-        ),
-        MapMarker(
-            "Cobalt Coastlands",
-            Offset(885.4229f, 261.37247f),
-            MarkerShapeClass.MARKER
-        ),
-        MapMarker(
-            "Alabaster Icelands",
-            Offset(414.4746f, 89.37649f),
-            MarkerShapeClass.MARKER
-        ),
-    )
-
     val alabasterLocationMarkers = listOf(
         MapMarker(
             "Lake Acuity",

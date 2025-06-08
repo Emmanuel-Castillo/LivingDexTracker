@@ -1,6 +1,5 @@
 package com.emmanuelcastillo.livingdextracker.utils.database.daos
 
-import android.location.Location
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy

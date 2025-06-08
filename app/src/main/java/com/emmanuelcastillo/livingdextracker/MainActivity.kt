@@ -49,30 +49,6 @@ class MainActivity : ComponentActivity() {
             LivingDexTrackerTheme {
                 if (appReady) {
                     MyApp()
-//                  Spacer(Modifier.size(24.dp))
-//                    val devMode = true // Set to false when done
-
-//                    val pokemonEncounterLocations = listOf("South Province (Area One)", "Poco Path", "Inlet Grotto")
-//                    PaldeaMap(
-//                        devMode = devMode,
-//                        pokemonEncounterLocations = pokemonEncounterLocations,
-//                        focusedLocations = emptyList()
-//                    )
-
-//                    GalarMap(
-//                        pokemonEncounterLocations = pokemonEncounterLocations,
-//                        devMode = devMode,
-//                        focusedLocations = emptyList()
-//                    )
-
-//                    HisuiMap(pokemonEncounterLocations,
-//                        devMode,
-//                        emptyList()
-//                    )
-
-//                    SinnohMap(pokemonEncounterLocations,
-//                        devMode, emptyList()
-//                    )
                 } else {
 
                     // Create loading body displaying prepopState for LoadingScreen
@@ -88,27 +64,24 @@ class MainActivity : ComponentActivity() {
 fun AccessPrepopState(prepopState: PrepopulationState, retryPrepopDB: () -> Unit) {
     return when (prepopState) {
         is PrepopulationState.Loading -> {
-            val state = prepopState
-            val message = state.message
+            val message = prepopState.message
             CircularProgressIndicator()
             Text("Loading: $message", textAlign = TextAlign.Center)
         }
 
         is PrepopulationState.PrepopulatingPokemon -> {
-            val state = prepopState
             Text(
-                "Saving Pokémon\n(${state.current}/${state.total}):\n${state.name}",
+                "Saving Pokémon\n(${prepopState.current}/${prepopState.total}):\n${prepopState.name}",
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.padding(8.dp))
             LinearProgressIndicator(
-                progress = { state.current / state.total.toFloat() },
+                progress = { prepopState.current / prepopState.total.toFloat() },
             )
         }
         // State error message, and prompt user to try again
         is PrepopulationState.Error -> {
-            val state = prepopState
-            Text(state.message)
+            Text(prepopState.message)
             Button(onClick = retryPrepopDB) {
                 Text("Try again")
             }
@@ -134,7 +107,6 @@ fun LoadingScreenLoadingPreview() {
 }
 
 @Preview
-
 @Composable
 fun LoadingScreenPrepopulatingPokemonPreview() {
     LivingDexTrackerTheme {
@@ -152,8 +124,7 @@ fun LoadingScreenPrepopulatingPokemonPreview() {
 // The following pages are contained at the moment:
 //  1. GameSelectionScreen (startDestination)
 //  2. LivingDexScreen
-//  3. com.emmanuelcastillo.livingdextracker.PokemonScreen
-//  4. SettingsScreen
+//  3. PokemonScreen
 @Composable
 fun MyApp(modifier: Modifier = Modifier) {
     val navController = rememberNavController()
@@ -183,7 +154,7 @@ fun MyApp(modifier: Modifier = Modifier) {
                 val gameEntryId = backStackEntry.arguments?.getInt("gameEntryId") ?: 0
                 PokemonScreen(navController, gameId, gameEntryId)
             }
-            composable("settings") { SettingsScreen() }
+//            composable("settings") { SettingsScreen() }
         }
     }
 }

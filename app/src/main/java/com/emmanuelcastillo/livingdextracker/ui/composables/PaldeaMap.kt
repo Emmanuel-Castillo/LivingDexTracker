@@ -12,7 +12,7 @@ fun PaldeaMap(
     focusedLocations: List<String>
 ) {
 
-// height set to 1100
+    // height set to 1100
     val imageOriginalSize = IntSize(4506, 1100)
     val image = R.drawable.paldea
 
@@ -592,9 +592,6 @@ fun PaldeaMap(
         )
     // Fixed map markers of routes, cities, etc.
 
-    // Markers needed:
-    // Alfornada Cavern
-    // Colonnade Hollow
     val locationMarkers = listOf<MapMarker>(
         MapMarker(
             "Casseroya Lake",

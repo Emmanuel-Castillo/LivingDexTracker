@@ -90,7 +90,6 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-//                Log.d("LivingDexScreen", "Screen resumed, refreshing caught Pokémon")
                 pokedexModel.getCaughtPokemon(gameId)
             }
         }
@@ -110,8 +109,7 @@ fun LivingDexScreen(navController: NavController, gameId: Int) {
         }
 
         Column {
-
-            var paddingValues: PaddingValues
+            val paddingValues: PaddingValues
             when (configuration.orientation) {
                 Configuration.ORIENTATION_LANDSCAPE -> paddingValues =
                     PaddingValues(horizontal = 60.dp, vertical = 20.dp)

@@ -56,7 +56,7 @@ fun LocationRow(
             .fillMaxWidth(),
     ) {
 
-        // Display Location Name and Expanded Arrows
+        // Display Location com.emmanuelcastillo.livingdextracker.utils.api.Name and Expanded Arrows
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),

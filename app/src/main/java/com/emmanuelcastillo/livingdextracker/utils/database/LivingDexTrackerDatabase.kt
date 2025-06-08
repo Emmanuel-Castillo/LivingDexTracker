@@ -1,8 +1,8 @@
 package com.emmanuelcastillo.livingdextracker.utils.database
 
-import PokedexResponse
-import PokemonResponse
-import PokemonSpeciesResponse
+import com.emmanuelcastillo.livingdextracker.utils.api.PokedexResponse
+import com.emmanuelcastillo.livingdextracker.utils.api.PokemonResponse
+import com.emmanuelcastillo.livingdextracker.utils.api.PokemonSpeciesResponse
 import android.content.Context
 import android.util.Log
 import androidx.room.Database
@@ -79,7 +79,6 @@ const val NUM_RV: Int = 5
 const val NUM_RVA: Int = 58
 const val NUM_POKEMON: Int = 1025
 const val NUM_POKEMON_VARIANTS: Int = 1084
-
 
 suspend fun prepopulateDatabase(
     db: LivingDexTrackerDatabase,
@@ -375,7 +374,7 @@ private fun fetchNationalPokedex(): Response<PokedexResponse>? {
         }
         response
     } catch (e: Exception) {
-        Log.e("Error", "Unable to retrieve National Dex ${e.message}")
+        Log.e("Error", "Unable to retrieve National Dex $e")
         null
     }
 }
@@ -437,10 +436,10 @@ private suspend fun prepopulateAllPokemon(
         }
         Log.d("Database", "Database pokemon prepopulation complete")
     } catch (e: Exception) {
-        Log.e("Error prepopulating all Pokemon: ", e.message.toString())
+        Log.e("Error", "Error prepopulating all Pokemon: $e")
         delay(1000)
         _prepopulationState.value =
-            PrepopulationState.Error("Unexpected error while prepopulating Pokémon: ${e.message}")
+            PrepopulationState.Error("Unexpected error while prepopulating Pokémon: ${e}")
     }
 }
 
@@ -567,8 +566,6 @@ private suspend fun prepopulatePokemonVariants(
                     // Check if regional variant. If so, set rvId found from regionalVariants
                     // Also set correct variantName
                     val splitWords = variety.pokemon.name.split("-")
-                    val variantSubstring = variety.pokemon.name.split("-").last()
-                    Log.d("Variant", "Last word: $variantSubstring")
 
 //                        val regionalVariants = listOf(
 //                            RegionalVariant(1, null),

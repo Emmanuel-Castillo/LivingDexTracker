@@ -8,7 +8,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
@@ -17,12 +16,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -30,7 +27,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -41,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -54,13 +51,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGame
@@ -81,12 +81,13 @@ fun GameSelectionScreen(navController: NavController, modifier: Modifier = Modif
     var filterMenuExpanded by remember { mutableStateOf(false) }
 
     Surface(modifier = modifier.fillMaxSize()) {
-
         if (configuration.orientation == Configuration.ORIENTATION_PORTRAIT) {
             FadingText("LivingDex Tracker")
         }
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .border(1.dp, Color.Black),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -109,7 +110,7 @@ fun GameSelectionScreen(navController: NavController, modifier: Modifier = Modif
                         )
                         for (i in 1..9) {
                             DropdownMenuItem(
-                                { Text("Gen ${i}") },
+                                { Text("Gen $i") },
                                 onClick = {
                                     viewModel.filterByGeneration(i)
                                     filterMenuExpanded = false
@@ -125,7 +126,6 @@ fun GameSelectionScreen(navController: NavController, modifier: Modifier = Modif
                     navController,
                 )
             }
-//            Button(onClick = { navController.navigate("settings") }) { Text("Settings") }
         }
     }
 }
@@ -136,26 +136,68 @@ fun GameCarousel(
     games: List<PokemonGame>,
     navController: NavController,
 ) {
-//    A state object that can be hoisted to control and observe scrolling.
-//    In most cases, this will be created via rememberLazyListState.
+    //    A state object that can be hoisted to control and observe scrolling.
+    //    In most cases, this will be created via rememberLazyListState.
     val listState = rememberLazyListState()
-//    Create and remember a FlingBehavior for decayed snapping in Lazy Lists.
-//    This will snap the item according to snapPosition.
+    //    Create and remember a FlingBehavior for decayed snapping in Lazy Lists.
+    //    This will snap the item according to snapPosition.
     val snappingLayout = rememberSnapFlingBehavior(lazyListState = listState)
 
     val navigateToLivingDexScreen = { endpoint: String ->
-        navController.navigate("game/" + endpoint)
+        navController.navigate("game/$endpoint")
     }
 
     val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
 
     // Default values for portrait mode
-    var horizontalPaddingValue = 80.dp
-
+    val spaceBetweenPosters: Dp
+    val horizontalPaddingValue: Dp
+    val focusedPosterPaddingMult: Int
     when (configuration.orientation) {
-        Configuration.ORIENTATION_LANDSCAPE -> horizontalPaddingValue = 380.dp
-        else -> horizontalPaddingValue = 80.dp
+        Configuration.ORIENTATION_LANDSCAPE -> {
+            when {
+                screenWidth <= 720 -> {
+                    spaceBetweenPosters = 8.dp
+                    focusedPosterPaddingMult = 3
+                    horizontalPaddingValue = screenWidth.dp / 2.5f
+                } // Medium & small phones
+                screenWidth <= 960 -> {
+                    spaceBetweenPosters = 16.dp
+                    focusedPosterPaddingMult = 2
+                    horizontalPaddingValue = screenWidth.dp / 2.45f
+                } // Large phones
+                else -> {
+                    spaceBetweenPosters = 20.dp
+                    focusedPosterPaddingMult = 3
+                    horizontalPaddingValue = screenWidth.dp / 2.45f
+                } // Tablets
+
+            }
+        }
+
+        else -> {
+            when {
+                screenWidth <= 360 -> {
+                    spaceBetweenPosters = 8.dp
+                    focusedPosterPaddingMult = 3
+                    horizontalPaddingValue = screenWidth.dp / 5f
+                }
+                screenWidth <= 412 -> {
+                    spaceBetweenPosters = 12.dp
+                    focusedPosterPaddingMult = 3
+                    horizontalPaddingValue = screenWidth.dp / 6.5f
+                } // Large phones
+                else -> {
+                    spaceBetweenPosters = 16.dp
+                    focusedPosterPaddingMult = 3
+                    horizontalPaddingValue = screenWidth.dp / 4f
+                } // Tablets
+
+            }
+        }
     }
+
 
     // If game carousel gets filtered, scroll back to the first game
     LaunchedEffect(games) {
@@ -166,8 +208,9 @@ fun GameCarousel(
         state = listState,
         flingBehavior = snappingLayout,
         contentPadding = PaddingValues(horizontal = horizontalPaddingValue),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        modifier = Modifier.fillMaxWidth()
+        horizontalArrangement = Arrangement.spacedBy(spaceBetweenPosters),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxSize()
     ) {
         itemsIndexed(games) { index, game ->
             val isFocused = isItemFocused(index, listState)
@@ -180,34 +223,27 @@ fun GameCarousel(
                 navGameId = game.gameId
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top,
-                modifier = Modifier.offset(y = if (isFocused) -40.dp else 0.dp)
+            Box(
+                modifier = Modifier
+                    .padding(if (isFocused) (spaceBetweenPosters * focusedPosterPaddingMult) else 0.dp) // Ensures spacing on both sides
+                    .zIndex(if (isFocused) 1f else 0f) // Keep focus item on top
             ) {
-                if (isFocused) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Spacer(Modifier.padding(bottom = 6.dp))
-                        Text(game.name, fontSize = 24.sp)
-                        stats?.let {
-                            if (stats.totalFromGame == 0) {
-                                Text("Pokedex Not Grabbed!")
-                            } else {
-                                Text(stats.numCaughtFromGame.toString() + "/" + stats.totalFromGame.toString())
-                            }
-                        }
-                    }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.offset(y = if (isFocused) (-20).dp else 0.dp)
+                ) {
+                    GamePosterItem(
+                        imageFileName,
+                        navGameId,
+                        isFocused = isFocused,
+                        navigate = navigateToLivingDexScreen,
+                        stats
+                    )
+
                 }
-                Spacer(modifier = Modifier.padding(24.dp))
-                GamePosterItem(
-                    imageFileName,
-                    navGameId,
-                    isFocused = isFocused,
-                    navigate = navigateToLivingDexScreen
-                )
             }
+
 
         }
     }
@@ -215,12 +251,12 @@ fun GameCarousel(
 
 @Composable
 fun isItemFocused(index: Int, listState: LazyListState): Boolean {
-//    The object of LazyListLayoutInfo calculated during the last layout pass. For example, you can use it to calculate what items are currently visible.
-//    Note that this property is observable and is updated after every scroll or remeasure.
-    val layoutInfo = listState.layoutInfo
-    val visibleItems = layoutInfo.visibleItemsInfo
+    //    The object of LazyListLayoutInfo calculated during the last layout pass. For example, you can use it to calculate what items are currently visible.
+    //    Note that this property is observable and is updated after every scroll or remeasure.
+    val layoutInfo = remember { derivedStateOf { listState.layoutInfo } }
+    val visibleItems = layoutInfo.value.visibleItemsInfo
 
-    val center = layoutInfo.viewportStartOffset + layoutInfo.viewportSize.width / 2
+    val center = layoutInfo.value.viewportStartOffset + layoutInfo.value.viewportSize.width / 2
 
     return visibleItems
         .minByOrNull { abs((it.offset + it.size / 2) - center) }
@@ -232,22 +268,27 @@ fun GamePosterItem(
     imageFileName: String?,
     navGameId: Int?,
     isFocused: Boolean,
-    navigate: (String) -> Unit
+    navigate: (String) -> Unit,
+    stats: NumCaughtAndTotal?
 ) {
 
     val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
 
     // Default portrait values
-    var posterSize = Pair(350.dp, 240.dp)
-    var scaleFactor = 1.2f
+    val scaleFactor: Float
+    var basePosterHeight = screenHeight * 0.38f // 30% of screen height
+
 
     when (configuration.orientation) {
         Configuration.ORIENTATION_LANDSCAPE -> {
-            posterSize = Pair(210.dp, 145.dp)
             scaleFactor = 1.4f
+            basePosterHeight = screenHeight * 0.45f
         }
 
-        else -> posterSize = Pair(350.dp, 240.dp)
+        else -> {
+            scaleFactor = 1.2f
+        }
     }
 
     // Scaling the poster item if focused
@@ -258,8 +299,8 @@ fun GamePosterItem(
 
     // Animating a vertical up/down infinite for the poster
     val hoverOffset by rememberInfiniteTransition().animateFloat(
-        initialValue = 0f,
-        targetValue = -20f,
+        initialValue = -10f,
+        targetValue = 10f,
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
@@ -268,27 +309,30 @@ fun GamePosterItem(
 
     // Modifier for poster
     val modifier = Modifier
+        .zIndex(if (isFocused) 1f else 0f)
         .graphicsLayer {
             scaleX = scale
             scaleY = scale
             translationY = if (isFocused) hoverOffset else 0f
         }
-        .size(height = posterSize.first, width = posterSize.second)
-        .padding(8.dp)
-        .background(Color.DarkGray)
-        .border(1.dp, isSystemInDarkTheme().let { Color.White }, RoundedCornerShape(8.dp))
-        .clip(RoundedCornerShape(8.dp))
+        .offset(
+            y = if (isFocused) 10.dp else 0.dp
+        )
+        .height(basePosterHeight)
         .clickable {
             navGameId?.let { navigate(navGameId.toString()) }
         }
+//        .background(Color.DarkGray, shape = RoundedCornerShape(8.dp))
+//        .border(1.dp, isSystemInDarkTheme().let { Color.White }, RoundedCornerShape(8.dp))
 
-//    load the bitmap once in a non-blocking way outside of recomposition
+
+    //    load the bitmap once in a non-blocking way outside of recomposition
     val context = LocalContext.current
     val imageBitmap by produceState<ImageBitmap?>(initialValue = null, imageFileName) {
         value = withContext(Dispatchers.IO) {
             try {
                 imageFileName?.replace(":", "")?.let { fileName ->
-                    context.assets.open("Pokemon_Main_Series_Posters/$fileName.png").use {
+                    context.assets.open("Pokemon_Main_Series_Posters/$fileName.webp").use {
                         BitmapFactory.decodeStream(it)?.asImageBitmap()
                     }
                 }
@@ -298,15 +342,35 @@ fun GamePosterItem(
         }
     }
 
-    Box(modifier) {
+    Box(modifier, contentAlignment = Alignment.Center) {
         imageBitmap?.let {
             Image(
                 bitmap = it,
                 contentDescription = imageFileName,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .border(
+                        2.dp,
+                        isSystemInDarkTheme().let { Color.White }, RoundedCornerShape(8.dp)
+                    )
+                    .clip(
+                        RoundedCornerShape(8.dp)
+                    )
+
+
             )
         } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
+
+        if (isFocused) {
+            stats?.let {
+                if (stats.totalFromGame != 0) {
+                    Text(stats.numCaughtFromGame.toString() + "/" + stats.totalFromGame.toString(), modifier = Modifier.align(Alignment.TopCenter).offset(y = -25.dp))
+                }
+            }
+        }
+
     }
 
 }
@@ -333,3 +397,10 @@ fun FadingText(text: String) {
         fontSize = 32.sp
     )
 }
+
+@Composable
+fun responsiveFontSize(multiplier: Float = 0.05f): TextUnit {
+    val configuration = LocalConfiguration.current
+    return (configuration.screenWidthDp * multiplier).sp
+}
+

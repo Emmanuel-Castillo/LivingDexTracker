@@ -11,13 +11,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -35,13 +28,12 @@ fun PokemonGrid(
     removeFromSet: (Int) -> Unit,
 ) {
 
-    val confiuration = LocalConfiguration.current
+    val configuration = LocalConfiguration.current
 
     // Default portrait values
-    var numCols = 6
-    when (confiuration.orientation) {
-        Configuration.ORIENTATION_LANDSCAPE -> numCols = 9
-        else -> numCols = 6
+    val numCols: Int = when (configuration.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> 9
+        else -> 6
     }
     LazyVerticalGrid(
         columns = GridCells.Fixed(numCols),
@@ -85,7 +77,9 @@ fun PokemonGrid(
                             selectable = selectable,
                             captured = isCaptured,
                             onCheckChange = { cellCheckOnChange() },
-                            onClick = { cellOnClick() }
+                            onClick = { cellOnClick() },
+                            pokemonId = pokemon.nationalDexId,
+                            pokemonRvId = pokemon.rvId
                         )
                     }
                 }

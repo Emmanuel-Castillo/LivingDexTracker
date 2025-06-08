@@ -1,14 +1,9 @@
 package com.emmanuelcastillo.livingdextracker.utils.database.daos
 
 import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
-import androidx.room.PrimaryKey
 import androidx.room.Query
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGameEntry
 import com.emmanuelcastillo.livingdextracker.utils.database.UserPokemon
 
 // UserPokemon Schema

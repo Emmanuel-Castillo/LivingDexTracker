@@ -20,12 +20,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -47,7 +47,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.motionEventSpy
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -58,7 +57,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import java.sql.Blob
 
 data class Vertex(
     val name: String,
@@ -112,11 +110,6 @@ sealed class MarkerShapeClass {
     class CUSTOM_SHAPE(val path: Path) : MarkerShapeClass()
 }
 
-//@Composable
-//fun MapEditor(
-//
-//)
-
 @Composable
 fun Map(
     locationMarkers: List<MapMarker>,
@@ -152,30 +145,30 @@ fun Map(
     Box(
         modifier = Modifier
             .background(color = Color.Transparent.copy(alpha = .4f))
-            .pointerInput(Unit) {
-                if (!devMode) {
-                    detectTransformGestures { _, panChange, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(1f, 3f)
-
-                        val scaledWidth = imageOriginalSize.width * scale
-                        val scaledHeight = imageOriginalSize.height * scale
-
-                        val maxPanX = ((scaledWidth - containerSize.width) / 2f).coerceAtLeast(0f)
-                        val maxPanY = ((scaledHeight - containerSize.height) / 2f).coerceAtLeast(0f)
-
-
-                        val proposedPan = pan + panChange
-                        pan = Offset(
-                            x = proposedPan.x.coerceIn(-maxPanX, maxPanX),
-                            y = proposedPan.y.coerceIn(-maxPanY, maxPanY)
-                        )
-                    }
-                }
-
-            }
+//            .pointerInput(Unit) {
+//                if (!devMode) {
+//                    detectTransformGestures { _, panChange, zoom, _ ->
+//                        scale = (scale * zoom).coerceIn(1f, 3f)
+//
+//                        val scaledWidth = imageOriginalSize.width * scale
+//                        val scaledHeight = imageOriginalSize.height * scale
+//
+//                        val maxPanX = ((scaledWidth - containerSize.width) / 2f).coerceAtLeast(0f)
+//                        val maxPanY = ((scaledHeight - containerSize.height) / 2f).coerceAtLeast(0f)
+//
+//
+//                        val proposedPan = pan + panChange
+//                        pan = Offset(
+//                            x = proposedPan.x.coerceIn(-maxPanX, maxPanX),
+//                            y = proposedPan.y.coerceIn(-maxPanY, maxPanY)
+//                        )
+//                    }
+//                }
+//
+//            }
             .border(1.dp, Color.Black)
             .clipToBounds()
-            .height(with(LocalDensity.current) { imageOriginalSize.height.toDp() })
+            .wrapContentSize()
             .onSizeChanged { containerSize = it } // Measure container
     ) {
         // This layer zooms and pans only the image + markers
@@ -206,7 +199,7 @@ fun Map(
             Image(
                 painter = painterResource(id = image),
                 contentDescription = "Region Map",
-                contentScale = ContentScale.FillBounds
+                contentScale = ContentScale.FillWidth
             )
 
             // Markers
@@ -290,12 +283,10 @@ fun Map(
                     val isFocused by remember { mutableStateOf(false) }
 
                     Box(Modifier
-//                    .size(4.dp)
                         .offset(
                             x = with(density) { (dragOffset.x).toDp() },
                             y = with(density) { (dragOffset.y).toDp() }
                         )
-//                    .border(1.dp, Color.Black)
                     ) {
                         Canvas(modifier = Modifier
                             .size(2.dp)
@@ -306,11 +297,6 @@ fun Map(
                                         dragOffset += dragAmount
                                         println("\"${name}\" to Vertex(\"${name}\", Offset(${dragOffset.x}f, ${dragOffset.y}f))")
                                     }
-
-//                                detectTapGestures {
-//                                    isFocused = !isFocused
-//                                    print("tapped")
-//                                }
                                 }
                             }) {
 

@@ -32,15 +32,12 @@ fun TimeOfDayForecast(timeOfDayAndChanceMap: MutableMap<String, String>, modifie
                 if ((displayChance == "%") or (displayChance == "-%")) {
                     displayChance = "--%"
                 }
-//                Box(Modifier.padding(4.dp)) {
                     when (entry.key) {
                         "Morning" -> ComposeMorning(displayChance)
                         "Day" -> ComposeDay(displayChance)
                         "Night" -> ComposeNight(displayChance)
                         "Evening" -> ComposeNight(displayChance)
                         "Anytime" -> ComposeAll(displayChance)
-//                    }
-
                 }
             }
         }

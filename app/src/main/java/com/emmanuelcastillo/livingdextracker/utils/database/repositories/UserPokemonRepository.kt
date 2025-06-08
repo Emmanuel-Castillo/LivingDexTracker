@@ -13,5 +13,4 @@ class UserPokemonRepository(private val userPokemonDao: UserPokemonDao) {
 
     suspend fun getPokemonCaughtFromGame(gameId: Int) = userPokemonDao.getPokemonCaughtFromGame(gameId)
 
-    suspend fun getNumCaughtAndTotalPokemonFromGame(gameId: Int) = userPokemonDao.getNumCaughtAndTotalPokemonFromGame(gameId)
 }

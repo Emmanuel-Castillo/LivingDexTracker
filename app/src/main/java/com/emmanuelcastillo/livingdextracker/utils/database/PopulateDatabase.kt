@@ -48,19 +48,18 @@ suspend fun populateEncountersToDatabase(
                 filePath = "sv_encounters.json"
                 gameIds = listOf(37, 38)
             }
-
-            else -> ""
         }
+
         Log.d("PopulateDatabase", "filePath == $filePath")
-        if (filePath.equals("")) {
+        if (filePath == "") {
             return false
         }
 
-        Log.d("PopulateDatabase", "In populateEncountersToDatabase() w/ dexId: ${dexId}")
+        Log.d("PopulateDatabase", "In populateEncountersToDatabase() w/ dexId: $dexId")
 
         // 1. Loading JSON from Assets folder
         val jsonString =
-            context.assets.open("encounters/" + filePath).bufferedReader().use { it.readText() }
+            context.assets.open("encounters/$filePath").bufferedReader().use { it.readText() }
 
         // 2. Parson JSON into objects
         val gson = Gson()
@@ -84,7 +83,7 @@ suspend fun populateEncountersToDatabase(
                 // Grab location from data and see if exists in set. If none exist, create new location
                 // b/c for each new location added, it will then be stored in the set
                 val locationName = data.location.name
-                Log.d("PopulateDatabase", "Location Name: ${locationName}")
+                Log.d("PopulateDatabase", "Location com.emmanuelcastillo.livingdextracker.utils.api.Name: $locationName")
                 val location = locationSet.find { it.second == locationName }
                 var locationId: Int?
                 if (location == null) {
@@ -99,11 +98,11 @@ suspend fun populateEncountersToDatabase(
                 } else {
                     locationId = location.first
                 }
-                Log.d("PopulateDatabase", "Location id: ${locationId}")
+                Log.d("PopulateDatabase", "Location id: $locationId")
 
                 // Doing the same setup for location anchors
                 val anchorName = data.location.area_anchor
-                Log.d("PopulateDatabase", "Anchor Name: ${anchorName}")
+                Log.d("PopulateDatabase", "Anchor com.emmanuelcastillo.livingdextracker.utils.api.Name: $anchorName")
                 val anchor =
                     anchorSet.find { (it.third == anchorName) and (it.second == locationId) }
                 var anchorId: Int?
@@ -117,7 +116,7 @@ suspend fun populateEncountersToDatabase(
                 } else {
                     anchorId = anchor.first
                 }
-                Log.d("PopulateDatabase", "Anchor id: ${anchorId}")
+                Log.d("PopulateDatabase", "Anchor id: $anchorId")
 
                 // Grab pokemon id and regional variant id
                 val natDexId = data.pokemon.national_dex_id

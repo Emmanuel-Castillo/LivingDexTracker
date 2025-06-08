@@ -1,3 +1,5 @@
+package com.emmanuelcastillo.livingdextracker.utils.api
+
 // Response for Pokedex Api Call
 data class PokedexResponse(
     val id: Int,
@@ -18,7 +20,7 @@ data class PokemonSpecies(
     val url: String
 )
 
-// Response from PokemonSpecies url call
+// Response from com.emmanuelcastillo.livingdextracker.utils.api.PokemonSpecies url call
 data class PokemonResponse (
     // national pokedex number
     val id: Int,
@@ -38,12 +40,6 @@ data class PokemonAbility (
     val is_hidden: Boolean,
     val slot: Int,
     val ability: NamedAPIResource
-)
-
-data class Ability (
-    val id: Int,
-    val name: String,
-    val effect_entries: VerboseEffect
 )
 
 data class PokemonMove (
@@ -75,11 +71,6 @@ data class PokemonType (
 
 data class PokemonSprites(
     val front_default: String
-)
-
-data class PokemonLocationArea (
-    val location_area: NamedAPIResource,
-    val version_details: List<VersionEncounterDetail>
 )
 
 data class VersionEncounterDetail (

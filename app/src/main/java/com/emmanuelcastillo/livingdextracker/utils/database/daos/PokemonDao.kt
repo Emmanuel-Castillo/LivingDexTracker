@@ -1,11 +1,9 @@
 package com.emmanuelcastillo.livingdextracker.utils.database.daos
 
 import androidx.room.Dao
-import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Relation
 import com.emmanuelcastillo.livingdextracker.utils.database.Pokemon
 import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGameEntry
 import com.emmanuelcastillo.livingdextracker.utils.database.PokemonVariant

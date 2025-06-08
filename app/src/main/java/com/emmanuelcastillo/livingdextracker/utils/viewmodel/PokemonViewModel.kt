@@ -23,13 +23,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.lang.Thread.State
+import java.math.BigDecimal
+import java.math.RoundingMode
+import kotlin.math.roundToInt
 
 @SuppressLint("StaticFieldLeak")
 class
 PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : AndroidViewModel(application) {
 
-    private val _pokemon = MutableStateFlow<PokemonWithVariants?>(null)
-    val pokemon: StateFlow<PokemonWithVariants?> = _pokemon.asStateFlow()
+    private val _pokemon = MutableStateFlow<PokemonWithFormattedData?>(null)
+    val pokemon: StateFlow<PokemonWithFormattedData?> = _pokemon.asStateFlow()
 
     private val _capturedId = MutableStateFlow<Int?>(null)
     val capturedId: StateFlow<Int?> = _capturedId.asStateFlow()
@@ -101,7 +104,58 @@ PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : Andr
             val pokemonRepository = PokemonRepository(pokemonDao)
 
             val cachedPokemon = pokemonRepository.getPokemonByGameEntryId(gameEntryId)
-            _pokemon.value = cachedPokemon
+
+            // Grab details from Pokemon
+            val id = cachedPokemon.nationalDexId
+            val name = cachedPokemon.variantName
+
+            val heightMeters = cachedPokemon.heightDecimetres.div(10.0)
+                .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
+            val heightTotalInches = heightMeters.times(39.37).roundToInt()
+            val heightFeet = heightTotalInches.div(12)
+            val heightInches = heightTotalInches.mod(12)
+
+            val weightKilograms = cachedPokemon.weightHectograms.div(10.00)
+                .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
+            val weightPounds = weightKilograms.times(2.205)
+                .let { BigDecimal(it).setScale(2, RoundingMode.HALF_UP).toDouble() }
+
+            val types = mutableListOf(cachedPokemon.type1)
+            cachedPokemon.type2?.let { types.add(it) }
+
+            val abilities = mutableListOf(cachedPokemon.ability1)
+            cachedPokemon.ability2?.let { abilities.add(it) }
+            cachedPokemon.hiddenAbility?.let { abilities.add(it) }
+            abilities.forEach { it.split("-").joinToString(" ") { word -> word.replaceFirstChar { c -> c.uppercaseChar() } } }
+
+            val stats = listOf(
+                Pair("HP", cachedPokemon.hpBaseStat),
+                Pair("Attack", cachedPokemon.atkBaseStat),
+                Pair("Defense", cachedPokemon.defBaseStat),
+                Pair("Sp. Attack", cachedPokemon.spAtkBaseStat),
+                Pair("Sp. Defense", cachedPokemon.spDefBaseStat),
+                Pair("Speed", cachedPokemon.speedBaseStat),
+            )
+
+            val formattedPokemon = PokemonWithFormattedData(
+                name = cachedPokemon.name,
+                variantId = cachedPokemon.variantId,
+                variantName = cachedPokemon.variantName,
+                nationalDexId = cachedPokemon.nationalDexId,
+                rvId = cachedPokemon.rvId,
+                isDefault = cachedPokemon.isDefault,
+                types = types,
+                abilities = abilities,
+                heightMetric = heightMeters.toString() + "m",
+                heightImperial = heightFeet.toString() + "ft " + heightInches.toString() + "in",
+                weightMetric = weightKilograms.toString() + "kg",
+                weightImperial = weightPounds.toString() + "lbs",
+                stats = stats,
+                cry = cachedPokemon.cry,
+                sprite = cachedPokemon.sprite
+            )
+
+            _pokemon.value = formattedPokemon
             _startingGradiantColor.value = findTypeColor(cachedPokemon.type1)
         } catch (e: Exception) {
             Log.e("Error", e.message.toString())
@@ -249,6 +303,24 @@ data class LocationDetails(
 
 data class EncounterDetails(
     val locations: MutableMap<String, LocationDetails> // Groups by location
+)
+
+data class PokemonWithFormattedData(
+    val name: String,
+    val variantId: Int,
+    val variantName: String,
+    val nationalDexId: Int,
+    val rvId: Int,
+    val isDefault: Boolean,
+    val types: List<String>,
+    val abilities: List<String>,
+    val heightMetric: String,
+    val heightImperial: String,
+    val weightMetric: String,
+    val weightImperial: String,
+    val stats: List<Pair<String, Int>>,
+    val cry: String,
+    val sprite: String
 )
 
 sealed class PokemonDataStatus {
