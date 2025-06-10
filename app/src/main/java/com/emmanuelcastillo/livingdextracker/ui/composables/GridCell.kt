@@ -1,3 +1,4 @@
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,7 +31,6 @@ fun GridCell(
     selectable: Boolean,
     captured: Boolean,
 
-
     // notifies the parent when a pokemon is checked/unchecked
     onCheckChange: () -> Unit,
     onClick: () -> Unit,
@@ -38,6 +38,9 @@ fun GridCell(
     pokemonRvId: Int,
 ) {
     val cellBackgroundColor = if (isSystemInDarkTheme()) Color.Black else Color.White
+    var imgLoaded by remember { mutableStateOf(false) }
+    var showResourceImg by remember { mutableStateOf(false) }
+    var showOnlineImg by remember { mutableStateOf(true) }
 
     if (selectable) {
         Checkbox(
@@ -50,49 +53,57 @@ fun GridCell(
         )
 
     }
-        Box(modifier = Modifier.size(64.dp).border(1.dp, Color.Black, shape = RoundedCornerShape(8.dp))
-            .background(
-                color = if (captured) Color.Green.copy(alpha = .65f) else cellBackgroundColor.copy(
-                    alpha = .65f
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable {
-                // If not in edit mode, navigate to pokemon screen
-                if (!selectable) {
-                    onClick()
-                }
-                // Else, in edit mode, select/deselect pokemon from captured list
-                else {
-                    onCheckChange()
-                }
-
-            }) {
-
-            var isLoading by remember { mutableStateOf(true) }
-            var showResourceImg by remember { mutableStateOf(false) }
-
-            if (isLoading) {
-                Image(
-                    painter = painterResource(R.drawable.pokeball),
-                    contentDescription = "Loading",
-                    modifier = Modifier.fillMaxSize(). padding(10.dp)
-                )
+    Box(modifier = Modifier
+        .size(64.dp)
+        .border(1.dp, Color.Black, shape = RoundedCornerShape(8.dp))
+        .background(
+            color = if (captured and imgLoaded) Color.Green.copy(alpha = .65f) else cellBackgroundColor.copy(
+                alpha = .65f
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+        .clickable {
+            // If not in edit mode, navigate to pokemon screen
+            if (!selectable) {
+                onClick()
+                Log.d("GridCell", "click on cell! ")
             }
+            // Else, in edit mode, select/deselect pokemon from captured list
+            else {
+                onCheckChange()
+            }
+        }) {
 
+        if (showOnlineImg) {
+            AsyncImage(
+                model = spriteUrl,
+                contentDescription = name,
+                modifier = Modifier.matchParentSize(),
+                onSuccess = { imgLoaded = true },
+                onError = {
+                    showResourceImg = true
+                    imgLoaded = true
+                    showOnlineImg = false
+                }
+            )
+        }
+
+
+        if (!imgLoaded) {
+            Image(
+                painter = painterResource(R.drawable.pokeball),
+                contentDescription = "Loading",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp)
+            )
+        } else {
             if (showResourceImg) {
                 GetPokemonImage(
                     pokemonId = pokemonId,
                     rvId = pokemonRvId
                 )
             }
-
-            AsyncImage(
-                model = spriteUrl,
-                contentDescription = name,
-                modifier = Modifier.matchParentSize(),
-                onSuccess = { isLoading = false },
-                onError = { showResourceImg = true}
-            )
         }
+    }
 }

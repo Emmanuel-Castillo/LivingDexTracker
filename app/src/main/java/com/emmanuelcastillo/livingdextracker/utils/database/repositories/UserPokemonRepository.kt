@@ -1,6 +1,6 @@
 package com.emmanuelcastillo.livingdextracker.utils.database.repositories
 
-import com.emmanuelcastillo.livingdextracker.utils.database.UserPokemon
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.UserPokemon
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.UserPokemonDao
 
 class UserPokemonRepository(private val userPokemonDao: UserPokemonDao) {

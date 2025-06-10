@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emmanuelcastillo.livingdextracker.utils.database.LivingDexTrackerDatabase
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGame
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGame
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.NumCaughtAndTotal
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

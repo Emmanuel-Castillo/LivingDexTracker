@@ -140,7 +140,7 @@ fun MyApp(modifier: Modifier = Modifier) {
                 "game/{gameId}",
                 arguments = listOf(navArgument("gameId") { type = NavType.IntType })
             ) { backStackEntry ->
-                val gameId = backStackEntry.arguments?.getInt("gameId") ?: 0
+                val gameId = backStackEntry.arguments?.getInt("gameId") ?: return@composable
                 LivingDexScreen(navController = navController, gameId)
             }
             composable(
@@ -150,8 +150,9 @@ fun MyApp(modifier: Modifier = Modifier) {
                     navArgument("gameEntryId") { type = NavType.IntType },
                 )
             ) { backStackEntry ->
-                val gameId = backStackEntry.arguments?.getInt("gameId") ?: 0
-                val gameEntryId = backStackEntry.arguments?.getInt("gameEntryId") ?: 0
+                val gameId = backStackEntry.arguments?.getInt("gameId") ?: return@composable
+                val gameEntryId =
+                    backStackEntry.arguments?.getInt("gameEntryId") ?: return@composable
                 PokemonScreen(navController, gameId, gameEntryId)
             }
 //            composable("settings") { SettingsScreen() }

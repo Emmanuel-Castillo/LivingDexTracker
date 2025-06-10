@@ -1,14 +1,18 @@
 package com.emmanuelcastillo.livingdextracker.utils.database
 
 import android.content.Context
-import android.content.Context.MODE_PRIVATE
-import android.provider.ContactsContract.Data
 import android.util.Log
+import com.emmanuelcastillo.livingdextracker.utils.data_classes.game_encounters.EncounterData
+import com.emmanuelcastillo.livingdextracker.utils.data_classes.game_encounters.EncounterFileData
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.GameEntryDetails
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.GameLocation
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.LocationAnchor
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonEncounter
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.DataStatus
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.lang.reflect.Type
 
 suspend fun populateEncountersToDatabase(
     context: Context,
@@ -63,12 +67,9 @@ suspend fun populateEncountersToDatabase(
 
         // 2. Parson JSON into objects
         val gson = Gson()
-        val encounterMap: Map<String, List<EncounterData>> =
-            gson.fromJson(
-                jsonString,
-                object : TypeToken<Map<String, List<EncounterData>>>() {}.type
-            )
+        val encounterMap: EncounterFileData = gson.fromJson(jsonString, EncounterFileData::class.java)
 
+        Log.d("PopulateDatabase", "Set up encounterMap")
 
         // Utility sets of data to prevent redundant db calls
         // Retrieve GameEntryDetails (from respected Pokedex) from db
@@ -76,7 +77,8 @@ suspend fun populateEncountersToDatabase(
         val anchorSet = emptySet<Triple<Int, Int, String>>().toMutableSet()
         val pokemonGameEntryList = db.pokemonGameDao().getAllEntriesByPokedexId(dexId)
 
-        for ((_, encounters) in encounterMap) {
+        val gameEncounters = encounterMap.encounters
+        for ((_, encounters) in gameEncounters) {
             for (data in encounters) {
 
                 // To save a PokemonEncounter instance, GameLocation and LocationAnchors must be saved first
@@ -159,31 +161,3 @@ suspend fun populateEncountersToDatabase(
     }
     return true
 }
-
-
-data class EncounterData(
-    val pokemon: PokemonData,
-    val encounter_method: EncounterMethodData,
-    val location: LocationData
-)
-
-data class PokemonData(
-    val national_dex_id: Int,
-    val name: String,
-    val rvId: Int,
-)
-
-data class EncounterMethodData(
-    val method: String,
-    val time_of_day: String,
-    val item_needed: String?,
-    val requisite: String?,
-    val chance: String
-)
-
-data class LocationData(
-    val name: String,
-    val area_anchor: String,
-    val region: String,
-    val game_version: List<Int>
-)

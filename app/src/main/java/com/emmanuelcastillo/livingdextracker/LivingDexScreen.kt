@@ -1,8 +1,6 @@
-import android.annotation.SuppressLint
 import android.app.Application
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,15 +45,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.emmanuelcastillo.livingdextracker.ui.composables.PokemonGrid
-import com.emmanuelcastillo.livingdextracker.utils.BDSP
-import com.emmanuelcastillo.livingdextracker.utils.LGA
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGame
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGame
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.DataStatus
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.LivingDexViewModel
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.factories.LivingDexViewModelFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 
 @Composable
 fun LivingDexScreen(navController: NavController, gameId: Int) {

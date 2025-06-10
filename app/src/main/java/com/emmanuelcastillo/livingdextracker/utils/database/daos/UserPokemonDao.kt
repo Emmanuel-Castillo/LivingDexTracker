@@ -4,7 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.emmanuelcastillo.livingdextracker.utils.database.UserPokemon
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.UserPokemon
 
 // UserPokemon Schema
 // Entity to store user caught pokemon

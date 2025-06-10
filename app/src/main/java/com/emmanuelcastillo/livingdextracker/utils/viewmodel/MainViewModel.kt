@@ -54,7 +54,7 @@ class MainViewModel(application: Application, private val preferencesManager: Pr
             // Launch a coroutine using Dispatchers.IO to initialize the database and populate if necessary
             withContext(Dispatchers.IO) {
                 Log.d("MainViewModel", "Need to prepopulate the database!")
-                prepopulateDatabase(db, _prepopulationState)
+                prepopulateDatabase(db, _prepopulationState, context)
             }
             if (_prepopulationState.value is PrepopulationState.Done) {
                 val success = preferencesManager.setDbPrepopulated(true)

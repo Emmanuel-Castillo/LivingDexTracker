@@ -5,31 +5,27 @@ import android.app.Application
 import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.emmanuelcastillo.livingdextracker.ui.composables.MapMarker
 import com.emmanuelcastillo.livingdextracker.ui.theme.findTypeColor
 import com.emmanuelcastillo.livingdextracker.utils.database.LivingDexTrackerDatabase
-import com.emmanuelcastillo.livingdextracker.utils.database.UserPokemon
-import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonWithVariants
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.UserPokemon
 import com.emmanuelcastillo.livingdextracker.utils.database.repositories.EncountersRepository
 import com.emmanuelcastillo.livingdextracker.utils.database.repositories.PokemonRepository
 import com.emmanuelcastillo.livingdextracker.utils.database.repositories.UserPokemonRepository
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.Thread.State
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
 
 @SuppressLint("StaticFieldLeak")
 class
-PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : AndroidViewModel(application) {
+PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) :
+    AndroidViewModel(application) {
 
     private val _pokemon = MutableStateFlow<PokemonWithFormattedData?>(null)
     val pokemon: StateFlow<PokemonWithFormattedData?> = _pokemon.asStateFlow()
@@ -53,7 +49,7 @@ PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : Andr
     val screenReady: StateFlow<Boolean> = _screenReady.asStateFlow()
 
     private val _startingGradiantColor = MutableStateFlow(Color.White)
-    val startingGradiantColor : StateFlow<Color> = _startingGradiantColor.asStateFlow()
+    val startingGradiantColor: StateFlow<Color> = _startingGradiantColor.asStateFlow()
 
     val CONTEXT = application.applicationContext
     val GAME_ID = gameId
@@ -126,7 +122,10 @@ PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : Andr
             val abilities = mutableListOf(cachedPokemon.ability1)
             cachedPokemon.ability2?.let { abilities.add(it) }
             cachedPokemon.hiddenAbility?.let { abilities.add(it) }
-            abilities.forEach { it.split("-").joinToString(" ") { word -> word.replaceFirstChar { c -> c.uppercaseChar() } } }
+            abilities.forEach {
+                it.split("-")
+                    .joinToString(" ") { word -> word.replaceFirstChar { c -> c.uppercaseChar() } }
+            }
 
             val stats = listOf(
                 Pair("HP", cachedPokemon.hpBaseStat),
@@ -218,7 +217,7 @@ PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : Andr
                     locationAnchor.methods.getOrPut(methodKey) { mutableListOf() }
 
                 // Check if anchorMethod has same requisite and game exclusivity as encounter
-                val anchorWithSameReqAndGE  =
+                val anchorWithSameReqAndGE =
                     anchorMethod.find { (it.requisite == encounter.requisite) and (it.itemNeeded == encounter.itemNeeded) and (it.gameExclusive == encounter.gameExclusive) }
                 if (anchorWithSameReqAndGE != null) {
                     anchorWithSameReqAndGE.timeOfDayAndChance.put(
@@ -266,7 +265,8 @@ PokemonViewModel(application: Application, gameId: Int, gameEntryId: Int) : Andr
                     gameId = GAME_ID
                 )
 
-                _capturedId.value = userPokemonRepository.insertCaughtPokemon(newUserPokemon).toInt()
+                _capturedId.value =
+                    userPokemonRepository.insertCaughtPokemon(newUserPokemon).toInt()
             } else {
                 userPokemonRepository.deleteUsingGameEntryId(GAME_ENTRY_ID, GAME_ID)
                 _capturedId.value = null

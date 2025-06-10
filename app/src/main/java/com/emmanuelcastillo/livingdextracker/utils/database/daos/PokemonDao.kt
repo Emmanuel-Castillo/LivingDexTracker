@@ -4,11 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.emmanuelcastillo.livingdextracker.utils.database.Pokemon
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGameEntry
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonVariant
-import com.emmanuelcastillo.livingdextracker.utils.database.RegionalVariant
-import com.emmanuelcastillo.livingdextracker.utils.database.RegionalVariantAvailability
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.Pokemon
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGameEntry
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonVariant
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.RegionalVariant
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.RegionalVariantAvailability
 
 @Dao
 interface PokemonDao {

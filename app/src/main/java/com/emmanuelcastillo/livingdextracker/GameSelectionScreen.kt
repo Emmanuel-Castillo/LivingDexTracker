@@ -57,13 +57,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGame
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGame
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.NumCaughtAndTotal
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.GameSelectionViewModel
 import kotlinx.coroutines.Dispatchers
@@ -183,6 +182,7 @@ fun GameCarousel(
                     focusedPosterPaddingMult = 3
                     horizontalPaddingValue = screenWidth.dp / 5f
                 }
+
                 screenWidth <= 412 -> {
                     spaceBetweenPosters = 12.dp
                     focusedPosterPaddingMult = 3
@@ -366,7 +366,12 @@ fun GamePosterItem(
         if (isFocused) {
             stats?.let {
                 if (stats.totalFromGame != 0) {
-                    Text(stats.numCaughtFromGame.toString() + "/" + stats.totalFromGame.toString(), modifier = Modifier.align(Alignment.TopCenter).offset(y = -25.dp))
+                    Text(
+                        stats.numCaughtFromGame.toString() + "/" + stats.totalFromGame.toString(),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = (-25).dp)
+                    )
                 }
             }
         }
@@ -398,9 +403,4 @@ fun FadingText(text: String) {
     )
 }
 
-@Composable
-fun responsiveFontSize(multiplier: Float = 0.05f): TextUnit {
-    val configuration = LocalConfiguration.current
-    return (configuration.screenWidthDp * multiplier).sp
-}
 

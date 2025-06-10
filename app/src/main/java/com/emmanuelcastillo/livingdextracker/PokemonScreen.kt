@@ -8,6 +8,7 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
 import android.net.Uri
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -80,6 +81,7 @@ fun PokemonScreen(
     gameEntryId: Int,
 ) {
 
+    Log.d("PokemonScreen", "Made it to screen! gameId: $gameId, gameEntryId: $gameEntryId")
     val context = LocalContext.current.applicationContext
     val configuration = LocalConfiguration.current
 
@@ -175,22 +177,22 @@ fun PokemonScreen(
             }
 
             // Play the cry once when the details are loaded
-            LaunchedEffect(cryUrl) {
-                if (playCry) {
-                    cryUrl.let {
-                        MediaPlayer().apply {
-                            setDataSource(context, Uri.parse(it))
-                            prepare()
-                            start()
-                            setOnCompletionListener { mp ->
-                                mp.release() // Release mp after playback
-                            }
-                        }
-                    }
-                    playCry = false
-                }
-
-            }
+//            LaunchedEffect(cryUrl) {
+//                if (playCry) {
+//                    cryUrl.let {
+//                        MediaPlayer().apply {
+//                            setDataSource(context, Uri.parse(it))
+//                            prepare()
+//                            start()
+//                            setOnCompletionListener { mp ->
+//                                mp.release() // Release mp after playback
+//                            }
+//                        }
+//                    }
+//                    playCry = false
+//                }
+//
+//            }
         } else {
             val loadingBody = @Composable {
                 Text(
@@ -587,7 +589,7 @@ fun PokemonStat(
                 if (isSystemInDarkTheme()) {
                     Color.Black
                 } else
-                Color(0xFF505050)
+                    Color(0xFF505050)
             ) // Base background
     ) {
         // Progress background layer

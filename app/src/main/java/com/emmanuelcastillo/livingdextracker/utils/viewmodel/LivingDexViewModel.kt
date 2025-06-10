@@ -2,16 +2,15 @@ package com.emmanuelcastillo.livingdextracker.utils.viewmodel
 
 import android.annotation.SuppressLint
 import android.app.Application
-import android.content.Context.MODE_PRIVATE
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.emmanuelcastillo.livingdextracker.utils.PreferencesManager
-import com.emmanuelcastillo.livingdextracker.utils.api.RetrofitClient
+import com.emmanuelcastillo.livingdextracker.utils.data_classes.game_dex.DexJSONData
 import com.emmanuelcastillo.livingdextracker.utils.database.LivingDexTrackerDatabase
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGame
-import com.emmanuelcastillo.livingdextracker.utils.database.PokemonGameEntry
-import com.emmanuelcastillo.livingdextracker.utils.database.UserPokemon
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGame
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGameEntry
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.UserPokemon
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonCaughtFromGame
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonInGame
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonWithVariants
@@ -19,6 +18,7 @@ import com.emmanuelcastillo.livingdextracker.utils.database.populateEncountersTo
 import com.emmanuelcastillo.livingdextracker.utils.database.repositories.PokemonGameRepository
 import com.emmanuelcastillo.livingdextracker.utils.database.repositories.PokemonRepository
 import com.emmanuelcastillo.livingdextracker.utils.database.repositories.UserPokemonRepository
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -113,7 +113,8 @@ class LivingDexViewModel(
             val isEncountersPrepopulated = preferencesManager.isGameEncountersPrepopulated(dexId)
             if (!isEncountersPrepopulated) {
                 Log.d("LivingDexVM", "Need to populate encounters to database for pokedex #$dexId")
-                val encountersPopulated = populateEncountersToDatabase(context, dexId, _fetchingStatus)
+                val encountersPopulated =
+                    populateEncountersToDatabase(context, dexId, _fetchingStatus)
                 if (_fetchingStatus.value !is DataStatus.Error) {
                     // Set encounter flags for games w/ newly inserted encounters
                     if (encountersPopulated) {
@@ -253,167 +254,157 @@ class LivingDexViewModel(
             withContext(Dispatchers.IO) {
                 for (i in 0..<numPokedexes) {
                     val currDexApiId = pokedexApiId + i
-                    Log.d("API", "Fetching from API using pokedexApiId = $currDexApiId")
-                    // Else, call the API to store and return list
-                    // Calling particular pokemon from game w/ gameId
-                    val call = RetrofitClient.instance.getPokedexById(currDexApiId)
-                    val response = call.execute()
+                    Log.d("API", "Fetching from JSON fuke using pokedexApiId = $currDexApiId")
+                    val jsonString =
+                        context.assets.open("dex/dex_${currDexApiId}.json").bufferedReader()
+                            .use { it.readText() }
 
-                    if (response.isSuccessful) {
-                        Log.d("API", "Pokemon found!")
-                        val pokemonEntries = response.body()?.pokemon_entries
-                            ?: throw Exception("Cannot fetch pokemon_entries list!")
+                    val gson = Gson()
+                    val dexData: DexJSONData = gson.fromJson(
+                        jsonString,
+                        DexJSONData::class.java
+                    )
 
-                        val currPokedex = Pokedex(
-                            pokemon = MutableList(
-                                size = pokemonEntries.size,
-                            ) { _ ->
-                                PokemonMap(
-                                    name = "",
-                                    variants = mutableListOf()
-                                )
-                            }
-                        )
+                    val pokemonEntries = dexData.entries
+                    val pokedexSize = pokemonEntries.size
 
-                        var pokedexSize = pokemonEntries.size
-                        var currentSizeIndex = 0
-
-                        // Default for inserting pokemon to list starting at order number 1
-                        // Will change if order number starts at 0 (Victini in BW)
-                        var entryIndexOffset = 1
-
-                        var partialPokedexIndexOffset = 0
-                        if (response.body()!!.id == 13) {
-                            partialPokedexIndexOffset = 150
+                    val currPokedex = Pokedex(
+                        pokemon = MutableList(
+                            size = pokemonEntries.size,
+                        ) { _ ->
+                            PokemonMap(
+                                name = "",
+                                variants = mutableListOf()
+                            )
                         }
-                        if (response.body()!!.id == 14) {
-                            partialPokedexIndexOffset = 303
-                        }
-                        Log.d(
-                            "partialOffset",
-                            "partialPokedexIndexOffset: $partialPokedexIndexOffset"
-                        )
+                    )
 
-                        for (entry in pokemonEntries) {
-                            val entryUrl = entry.pokemon_species.url
-                            val entryNumber = entry.entry_number
-                            if (entryNumber == 0) {
-                                entryIndexOffset = 0
-                            }
+                    var currentSizeIndex = 0
 
-                            val entryId = entryUrl.split('/')[6].toInt()
-                            Log.d("API", "Fetching Pokemon (natDexId = $entryId)")
+                    // Default for inserting pokemon to list starting at order number 1
+                    // Will change if order number starts at 0 (Victini in BW)
+                    var entryIndexOffset = 1
 
-                            val pokemonVariantEntryList =
-                                emptyList<PokemonInGame>().toMutableList()
-
-                            val pokemonWithVariants: List<PokemonWithVariants>
-
-                            withContext(Dispatchers.IO) {
-                                // Grab Pokemon from Room determine which variants belong in that game (create PokemonGameEntry rows)
-                                // Grabs Pokemon from db
-                                pokemonWithVariants =
-                                    pokemonRepository.getPokemonById(entryId)
-                            }
-                            Log.d("API", pokemonWithVariants.toString())
-
-                            if (pokemonWithVariants.isNotEmpty()) {
-                                val pokemonName = pokemonWithVariants[0].name
-
-                                // Add new game entry for regional variants available in game
-                                for (pokemon in pokemonWithVariants) {
-                                    if (regionalVariantsAvailable.any { it.rvId == pokemon.rvId }) {
-
-                                        Log.d(
-                                            "API",
-                                            "${pokemon.name} w/ rvId: ${pokemon.rvId} in the game"
-                                        )
-                                        // Debug: check if game entry exist to add new one
-                                        var variantInGame =
-                                            pokemonDao.hasGameEntry(
-                                                pokemon.variantId,
-                                                pokedexId
-                                            )
-                                        if (variantInGame != null) {
-                                            Log.d(
-                                                "API",
-                                                "${pokemon.name} already has game entry in gameId: ${gameId}!"
-                                            )
-                                            pokemonVariantEntryList.add(variantInGame)
-                                            continue
-                                        }
-
-                                        Log.d(
-                                            "API",
-                                            "Creating game entry for ${pokemon.name} in gameId: ${gameId}"
-                                        )
-                                        val newGameEntry = PokemonGameEntry(
-                                            pokedexId = pokedexId,
-                                            variantId = pokemon.variantId,
-                                            pokedexOrderNumber = (if (entryIndexOffset == 1) entryNumber else entryNumber.plus(
-                                                1
-                                            ).plus(partialPokedexIndexOffset))
-                                        )
-                                        pokemonDao.insertGameEntry(newGameEntry)
-                                        variantInGame =
-                                            pokemonDao.hasGameEntry(
-                                                pokemon.variantId,
-                                                pokedexId
-                                            )
-
-                                        // Then add to pokedex
-                                        if (variantInGame != null) {
-                                            pokemonVariantEntryList.add(variantInGame)
-                                        }
-                                    }
-                                }
-
-                                Log.d("API", pokemonVariantEntryList.toString())
-                                pokemonVariantEntryList.sortBy { it.priority }
-                                currPokedex.pokemon[entryNumber.minus(entryIndexOffset)] =
-                                    PokemonMap(
-                                        name = pokemonName,
-                                        variants = pokemonVariantEntryList
-                                    )
-
-                                currentSizeIndex += 1
-
-                                // Post value to livingDexList once ALL pokemon details have been collected
-                                if (currentSizeIndex == pokedexSize) {
-                                    Log.d("API", "Current Pokedex#${i} retrieved!")
-                                    wholePokedex.pokemon += currPokedex.pokemon
-                                    if (i + 1 == numPokedexes) {
-                                        Log.d(
-                                            "API",
-                                            "Grabbed every Pokemon. Posting..." + currPokedex.toString()
-                                        )
-                                        _pokedex.value = wholePokedex
-                                    }
-                                } else {
-                                    Log.d("API", "$currentSizeIndex != $pokedexSize")
-                                }
-                            }   // End of entries loop
-                        }
-                    } else {
-                        val errorMsg =
-                            "Error retrieving Pokedex from PokeAPI: ${response}"
-                        Log.e(
-                            "Error",
-                            errorMsg
-                        )
-                        viewModelScope.launch {
-                            delay(500)
-                            _fetchingStatus.value = DataStatus.Error(errorMsg)
-                        }
+                    var partialPokedexIndexOffset = 0
+                    if (currDexApiId == 13) {
+                        partialPokedexIndexOffset = 150
                     }
+                    if (currDexApiId == 14) {
+                        partialPokedexIndexOffset = 303
+                    }
+                    Log.d(
+                        "partialOffset",
+                        "partialPokedexIndexOffset: $partialPokedexIndexOffset"
+                    )
 
+                    for (entry in pokemonEntries) {
+                        val entryUrl = entry.pokemon_species.url
+                        val entryNumber = entry.entry_number
+                        if (entryNumber == 0) {
+                            entryIndexOffset = 0
+                        }
+
+                        val entryId = entryUrl.split('/')[6].toInt()
+                        Log.d("API", "Fetching Pokemon (natDexId = $entryId)")
+
+                        val pokemonVariantEntryList =
+                            emptyList<PokemonInGame>().toMutableList()
+
+                        val pokemonWithVariants: List<PokemonWithVariants>
+
+                        withContext(Dispatchers.IO) {
+                            // Grab Pokemon from Room determine which variants belong in that game (create PokemonGameEntry rows)
+                            // Grabs Pokemon from db
+                            pokemonWithVariants =
+                                pokemonRepository.getPokemonById(entryId)
+                        }
+                        Log.d("API", pokemonWithVariants.toString())
+
+                        if (pokemonWithVariants.isNotEmpty()) {
+                            val pokemonName = pokemonWithVariants[0].name
+
+                            // Add new game entry for regional variants available in game
+                            for (pokemon in pokemonWithVariants) {
+                                if (regionalVariantsAvailable.any { it.rvId == pokemon.rvId }) {
+
+                                    Log.d(
+                                        "API",
+                                        "${pokemon.name} w/ rvId: ${pokemon.rvId} in the game"
+                                    )
+                                    // Debug: check if game entry exist to add new one
+                                    var variantInGame =
+                                        pokemonDao.hasGameEntry(
+                                            pokemon.variantId,
+                                            pokedexId
+                                        )
+                                    if (variantInGame != null) {
+                                        Log.d(
+                                            "API",
+                                            "${pokemon.name} already has game entry in gameId: ${gameId}!"
+                                        )
+                                        pokemonVariantEntryList.add(variantInGame)
+                                        continue
+                                    }
+
+                                    Log.d(
+                                        "API",
+                                        "Creating game entry for ${pokemon.name} in gameId: ${gameId}"
+                                    )
+                                    val newGameEntry = PokemonGameEntry(
+                                        pokedexId = pokedexId,
+                                        variantId = pokemon.variantId,
+                                        pokedexOrderNumber = (if (entryIndexOffset == 1) entryNumber else entryNumber.plus(
+                                            1
+                                        ).plus(partialPokedexIndexOffset))
+                                    )
+                                    pokemonDao.insertGameEntry(newGameEntry)
+                                    variantInGame =
+                                        pokemonDao.hasGameEntry(
+                                            pokemon.variantId,
+                                            pokedexId
+                                        )
+
+                                    // Then add to pokedex
+                                    if (variantInGame != null) {
+                                        pokemonVariantEntryList.add(variantInGame)
+                                    }
+                                }
+                            }
+
+                            Log.d("API", pokemonVariantEntryList.toString())
+                            pokemonVariantEntryList.sortBy { it.priority }
+                            currPokedex.pokemon[entryNumber.minus(entryIndexOffset)] =
+                                PokemonMap(
+                                    name = pokemonName,
+                                    variants = pokemonVariantEntryList
+                                )
+
+                            currentSizeIndex += 1
+
+                            // Post value to livingDexList once ALL pokemon details have been collected
+                            if (currentSizeIndex == pokedexSize) {
+                                Log.d("API", "Current Pokedex#${i} retrieved!")
+                                wholePokedex.pokemon += currPokedex.pokemon
+                                if (i + 1 == numPokedexes) {
+                                    Log.d(
+                                        "API",
+                                        "Grabbed every Pokemon. Posting..." + currPokedex.toString()
+                                    )
+                                    _pokedex.value = wholePokedex
+                                }
+                            } else {
+                                Log.d("API", "$currentSizeIndex != $pokedexSize")
+                            }
+                        }   // End of entries loop
+                    }
                 }
+
             }
 
 
         } catch (e: Exception) {
             val errorMsg =
-                "Error retrieving Pokedex from PokeAPI: ${e.message}"
+                "Error retrieving Pokedex from JSON: ${e.message}"
             Log.e("Error", errorMsg)
             viewModelScope.launch {
                 delay(500)

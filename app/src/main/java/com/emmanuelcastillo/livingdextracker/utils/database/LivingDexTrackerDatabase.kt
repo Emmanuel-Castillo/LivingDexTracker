@@ -1,26 +1,34 @@
 package com.emmanuelcastillo.livingdextracker.utils.database
 
-import com.emmanuelcastillo.livingdextracker.utils.api.PokedexResponse
-import com.emmanuelcastillo.livingdextracker.utils.api.PokemonResponse
-import com.emmanuelcastillo.livingdextracker.utils.api.PokemonSpeciesResponse
 import android.content.Context
 import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.emmanuelcastillo.livingdextracker.utils.api.RetrofitClient
+import com.emmanuelcastillo.livingdextracker.utils.data_classes.national_dex.NationalDexData
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.EncounterDao
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonDao
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.PokemonGameDao
 import com.emmanuelcastillo.livingdextracker.utils.database.daos.UserPokemonDao
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.GameLocation
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.LocationAnchor
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.Pokedex
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.Pokemon
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonEncounter
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGame
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonGameEntry
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonRegion
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.PokemonVariant
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.RegionalVariant
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.RegionalVariantAvailability
+import com.emmanuelcastillo.livingdextracker.utils.database.entity_classes.UserPokemon
 import com.emmanuelcastillo.livingdextracker.utils.viewmodel.PrepopulationState
-import kotlinx.coroutines.CoroutineScope
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.Response
 
 // In the args, list the entity classes for the db and update version number when updating any schema
 @Database(
@@ -82,7 +90,8 @@ const val NUM_POKEMON_VARIANTS: Int = 1084
 
 suspend fun prepopulateDatabase(
     db: LivingDexTrackerDatabase,
-    _prepopulationState: MutableStateFlow<PrepopulationState>
+    _prepopulationState: MutableStateFlow<PrepopulationState>,
+    context: Context
 ) {
     try {
         withContext(Dispatchers.IO) {
@@ -156,16 +165,12 @@ suspend fun prepopulateDatabase(
                 )
             }
 
-            val regionalVariants = pokemonDao.getAllRegionalVariants()
-            Log.d(
-                "Database",
-                "Fetching regional variants before prepopulateAllPokemon()"
-            )
+
             val pokemonCount = pokemonDao.getCountOfPokemon()
             val pokemonVariantsCount = pokemonDao.getCountOfPokemonVariants()
             if ((pokemonCount != NUM_POKEMON) || (pokemonVariantsCount != NUM_POKEMON_VARIANTS)) {
                 _prepopulationState.value = PrepopulationState.Loading("Prepopulating Pokemon...")
-                prepopulateAllPokemon(pokemonDao, regionalVariants, _prepopulationState)
+                prepopulatePokemonToDatabase(context, _prepopulationState)
                 Log.d(
                     "Database",
                     "Back in prepopulateDatabase(): Database pokemon prepopulation complete"
@@ -358,356 +363,91 @@ private fun prepopulateRegionalVariantAvailability(): List<RegionalVariantAvaila
     return rvaList
 }
 
-private fun fetchNationalPokedex(): Response<PokedexResponse>? {
-    return try {
-        Log.d("Database", "Fetching National Pokedex")
-        val call = RetrofitClient.instance.getPokedexById(1)
-        Log.d("Database", "Call = $call")
-        val response = call.execute()
-        if (!response.isSuccessful) {
-            Log.e(
-                "Database",
-                "Failed to fetch National Dex. HTTP ${response.code()}: ${
-                    response.errorBody()?.string()
-                }"
-            )
-        }
-        response
-    } catch (e: Exception) {
-        Log.e("Error", "Unable to retrieve National Dex $e")
-        null
-    }
-}
 
-private suspend fun prepopulateAllPokemon(
-    pokemonDao: PokemonDao,
-    regionalVariants: List<RegionalVariant>,
+
+
+data class VariantJSONData(
+    @SerializedName("variant_id") val variantId: Int,
+    @SerializedName("variant_name") val variantName: String,
+    @SerializedName("is_default") val isDefault: Boolean,
+    @SerializedName("type1") val type1: String,
+    @SerializedName("type2") val type2: String?,
+    @SerializedName("ability_1") val ability1: String,
+    @SerializedName("ability_2") val ability2: String?,
+    @SerializedName("hidden_ability") val hiddenAbility: String?,
+    @SerializedName("height_decimetres") val height: Int,
+    @SerializedName("weight_hectograms") val weight: Int,
+    @SerializedName("hp")val hp: Int,
+    @SerializedName("atk") val attack: Int,
+    @SerializedName("defense")val defense: Int,
+    @SerializedName("sp_atk") val specialAttack: Int,
+    @SerializedName("sp_def") val specialDefense: Int,
+    @SerializedName("speed")val speed: Int,
+    @SerializedName("cry")val cry: String,
+    @SerializedName("sprite")val sprite: String,
+    @SerializedName("rv_Id") val rvId: Int
+)
+
+suspend fun prepopulatePokemonToDatabase(
+    context: Context,
     _prepopulationState: MutableStateFlow<PrepopulationState>
 ) {
     try {
-        Log.d("Database", "In prepopulateAllPokemon(): Prepopulating Pokemon")
-        val response = fetchNationalPokedex()
-        if (response == null) {
-            delay(1000)
-            _prepopulationState.value =
-                PrepopulationState.Error("Failed to connect to the API to fetch the National Dex.")
-            return
-        }
+        val db = LivingDexTrackerDatabase.getDatabase(context)
+        val pokemonDao = db.pokemonDao()
 
-        if (!response.isSuccessful) {
-            delay(1000)
-            _prepopulationState.value =
-                PrepopulationState.Error("API error: HTTP ${response.code()} - ${response.message()}")
-            return
-        }
+        // 1. Loading JSON from Assets folder
+        val jsonString =
+            context.assets.open("dex/pokemon_national_dex.json").bufferedReader().use { it.readText() }
 
-        val body = response.body()
-        if (body == null || body.pokemon_entries.isEmpty()) {
-            delay(1000)
-            _prepopulationState.value =
-                PrepopulationState.Error("Received empty or malformed data from the National Dex API.")
-            return
-        }
-
-        Log.d("Database", "National Dex fetched! ${body.pokemon_entries.size} entries")
-        val nationalDexSize = body.pokemon_entries.size
-        for (entry in body.pokemon_entries) {
-
-            // Check if _prepopulationState has reached an error
-            if (_prepopulationState.value is PrepopulationState.Error) {
-                return
-            }
-
-            val dexId = entry.entry_number
-            val pokemonName = fixPokemonName(dexId, entry.pokemon_species.name)
-
-            pokemonDao.insertPokemon(
-                Pokemon(nationalDexId = dexId, name = pokemonName)
+        // 2. Parson JSON into objects
+        val gson = Gson()
+        val dexData: NationalDexData =
+            gson.fromJson(
+                jsonString,
+                NationalDexData::class.java
             )
 
-            prepopulatePokemonVariants(
-                pokemonName,
-                dexId,
-                pokemonDao,
-                regionalVariants,
-                _prepopulationState,
-                nationalDexSize
+        val dexLength = dexData.pokemon.size
+        for (pokemon in dexData.pokemon) {
+            _prepopulationState.value = PrepopulationState.PrepopulatingPokemon(
+                name = pokemon.name,
+                current = pokemon.nationalDexId,
+                total = dexLength
             )
-        }
-        Log.d("Database", "Database pokemon prepopulation complete")
-    } catch (e: Exception) {
-        Log.e("Error", "Error prepopulating all Pokemon: $e")
-        delay(1000)
-        _prepopulationState.value =
-            PrepopulationState.Error("Unexpected error while prepopulating Pokémon: ${e}")
-    }
-}
-
-fun fixPokemonName(dexId: Int, name: String): String {
-    return when (dexId) {
-        29 -> "Nidoran♀"
-        32 -> "Nidoran♂"
-        83 -> "Farfetch'd"
-        122 -> "Mr.Mime"
-        250 -> "Ho-Oh"
-        439 -> "Mime Jr."
-        474 -> "Porygon-Z"
-        669 -> "Flabébé"
-        772 -> "Type: Null"
-        865 -> "Sirfetch'd"
-        866 -> "Mr. Rime"
-        else -> name.split("-")
-            .joinToString(" ") { word -> word.replaceFirstChar { c -> c.titlecase() } }
-    }
-}
-
-private fun fetchPokemonSpecies(pokemonId: Int): Response<PokemonSpeciesResponse>? {
-    return try {
-        Log.d("Database", "Fetching Species Id: $pokemonId")
-        val call = RetrofitClient.instance.getPokemonSpeciesById(pokemonId)
-        val response = call.execute()
-        if (!response.isSuccessful) {
-            Log.e(
-                "Database",
-                "Failed to fetch National Dex. HTTP ${response.code()}: ${
-                    response.errorBody()?.string()
-                }"
-            )
-        }
-        response
-    } catch (e: Exception) {
-        Log.e("Error", "Unable to retrieve Species ${e.message}")
-        null
-    }
-}
-
-private fun fetchPokemonSpeciesVariant(variantId: Int): Response<PokemonResponse>? {
-    return try {
-        Log.d("Database", "Fetching Species Variant Id: $variantId")
-        val call = RetrofitClient.instance.getPokemonById(variantId)
-        val response = call.execute()
-        if (!response.isSuccessful) {
-            Log.e(
-                "Database",
-                "Failed to fetch National Dex. HTTP ${response.code()}: ${
-                    response.errorBody()?.string()
-                }"
-            )
-        }
-        response
-    } catch (e: Exception) {
-        Log.e("Error", "Unable to retrieve Species Variant ${e.message}")
-        null
-    }
-}
-
-private suspend fun prepopulatePokemonVariants(
-    pokemonSpeciesName: String,
-    natDexId: Int,
-    pokemonDao: PokemonDao,
-    regionalVariants: List<RegionalVariant>,
-    _prepopulationState: MutableStateFlow<PrepopulationState>,
-    nationalDexSize: Int
-) {
-    try {
-        Log.d(
-            "Database",
-            "In prepopulatePokemonVariants(natDexId: $natDexId): Prepopulating Pokemon Variants"
-        )
-        val response = fetchPokemonSpecies(natDexId)
-
-        if (response == null) {
-            delay(1000)
-            _prepopulationState.value =
-                PrepopulationState.Error("Failed to fetch species data for $pokemonSpeciesName (Dex ID: $natDexId)")
-            return
-        }
-
-        if (!response.isSuccessful) {
-            delay(1000)
-            _prepopulationState.value =
-                PrepopulationState.Error("API error: HTTP ${response.code()} - ${response.message()}")
-            return
-        }
-
-        val body = response.body()
-        if (body == null) {
-            delay(1000)
-            _prepopulationState.value =
-                PrepopulationState.Error("Received empty or malformed data from the Pokemon Species API.")
-            return
-        }
-
-        // Update loading bar progress indicator
-        _prepopulationState.value = PrepopulationState.PrepopulatingPokemon(
-            name = pokemonSpeciesName,
-            current = natDexId,
-            total = nationalDexSize
-        )
-
-        val name = body.name.split("-")
-            .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-        Log.d("Species", "$name retrieved!")
-        val varieties = body.varieties
-        if (varieties.isNotEmpty()) {
-            for (variety in varieties) {
-                val isDefault = variety.is_default
-
-                // Ignore Pikachu cap varieties
-                if (!isDefault && natDexId == 25)
-                    continue
-
-                // default value if isDefault
-                var variantName = pokemonSpeciesName
-                var rvId = 1
-
-                Log.d("Variant", "Before parsing: $variantName")
-                if (!isDefault) {
-                    // Check if regional variant. If so, set rvId found from regionalVariants
-                    // Also set correct variantName
-                    val splitWords = variety.pokemon.name.split("-")
-
-//                        val regionalVariants = listOf(
-//                            RegionalVariant(1, null),
-//                            RegionalVariant(2, "Alolan"),
-//                            RegionalVariant(3, "Galarian"),
-//                            RegionalVariant(4, "Hisuian"),
-//                            RegionalVariant(5, "Paldean")
-//                        )
-
-                    var rv: RegionalVariant? = null
-                    splitWords.forEach { word ->
-                        val foundRv = regionalVariants.find {
-                            it.nativeRegion?.lowercase()?.equals(word)
-                                ?: false
-                        }
-                        if (foundRv != null) {
-                            rv = foundRv
-                        }
-                    }
-
-                    Log.d("Variant", "Variant found: $rv")
-
-                    if (rv != null) {
-                        rvId = rv!!.rvId
-                        variantName = rv!!.name + " " + pokemonSpeciesName
-                    } else {
-                        // Any other variants that aren't regional variants, we skip
-                        continue
-                    }
-                }
-
-                Log.d("Variant", variantName)
-
-                val variantId =
-                    variety.pokemon.url.split("/")[6].toInt()
-                val varietyResponse = fetchPokemonSpeciesVariant(variantId)
-
-                if (varietyResponse == null) {
-                    delay(1000)
-                    _prepopulationState.value =
-                        PrepopulationState.Error("Failed to fetch variant data for $variantName (Variant ID: $variantId)")
-                    return
-                }
-
-                if (!varietyResponse.isSuccessful) {
-                    delay(1000)
-                    _prepopulationState.value =
-                        PrepopulationState.Error("API error: HTTP ${response.code()} - ${response.message()}")
-                    return
-                }
-
-                val varietyBody = varietyResponse.body()
-                if (varietyBody == null) {
-                    delay(1000)
-                    _prepopulationState.value =
-                        PrepopulationState.Error("Received empty or malformed data from the Pokemon Species Variant API.")
-                    return
-                }
-
-                val types = varietyBody.types
-                val type1 = types[0].type.name
-                    .replaceFirstChar { it.titlecase() }
-                var type2: String? = null
-                if (types.size > 1) {
-                    type2 = types[1].type.name
-                        .replaceFirstChar { it.titlecase() }
-                }
-
-                val abilities = varietyBody.abilities
-                val ability1 =
-                    abilities[0].ability.name.split("-")
-                        .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-                var abilityCounter = 1
-                var ability2: String? = null
-                var hiddenAbility: String? = null
-                while (abilityCounter < abilities.size) {
-                    val nextAbility =
-                        abilities[abilityCounter]
-                    if (nextAbility.is_hidden) {
-                        hiddenAbility =
-                            nextAbility.ability.name.split("-")
-                                .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-                    } else {
-                        ability2 =
-                            nextAbility.ability.name.split("-")
-                                .joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
-                    }
-                    abilityCounter += 1
-                }
-
-                val height = varietyBody.height
-                val weight = varietyBody.weight
-                val hp = varietyBody.stats[0].base_stat
-                val atk = varietyBody.stats[1].base_stat
-                val def = varietyBody.stats[2].base_stat
-                val spAtk = varietyBody.stats[3].base_stat
-                val spDef = varietyBody.stats[4].base_stat
-                val speed = varietyBody.stats[5].base_stat
-                val cry = varietyBody.cries.latest
-                val sprite =
-                    varietyBody.sprites.front_default
-
-                CoroutineScope(Dispatchers.IO).launch {
-                    pokemonDao.insertPokemonVariant(
-                        pokemonVariant = PokemonVariant(
-                            variantId = variantId,
-                            variantName = variantName,
-                            nationalDexId = natDexId,
-                            isDefault = isDefault,
-                            type1 = type1,
-                            type2 = type2,
-                            ability1 = ability1,
-                            ability2 = ability2,
-                            hiddenAbility = hiddenAbility,
-                            heightDecimetres = height,
-                            weightHectograms = weight,
-                            hpBaseStat = hp,
-                            atkBaseStat = atk,
-                            defBaseStat = def,
-                            spAtkBaseStat = spAtk,
-                            spDefBaseStat = spDef,
-                            speedBaseStat = speed,
-                            cry = cry,
-                            sprite = sprite,
-                            rvId = rvId
-                        )
+            pokemonDao.insertPokemon(Pokemon(nationalDexId = pokemon.nationalDexId, name = pokemon.name))
+            for (variant in pokemon.variants) {
+                pokemonDao.insertPokemonVariant(
+                    PokemonVariant(
+                        variantId = variant.variantId,
+                        variantName = variant.variantName,
+                        nationalDexId = pokemon.nationalDexId,
+                        rvId = variant.rvId,
+                        isDefault = variant.isDefault,
+                        type1 = variant.type1,
+                        type2 = variant.type2,
+                        ability1 = variant.ability1,
+                        ability2 = variant.ability2,
+                        hiddenAbility = variant.hiddenAbility,
+                        heightDecimetres = variant.height,
+                        weightHectograms = variant.weight,
+                        hpBaseStat = variant.hp,
+                        atkBaseStat = variant.attack,
+                        defBaseStat = variant.defense,
+                        spAtkBaseStat = variant.specialAttack,
+                        spDefBaseStat = variant.specialDefense,
+                        speedBaseStat = variant.speed,
+                        cry = variant.cry,
+                        sprite = variant.sprite
                     )
-                }
-                Log.d(
-                    "Database",
-                    "Database Pokemon Variant $variantName prepopulation complete"
                 )
             }
-            Log.d(
-                "Database",
-                "Database Pokemon Species $name prepopulation complete"
-            )
         }
+
     } catch (e: Exception) {
-        Log.e("Error on prepopulatePokemonVariants()", e.message.toString())
+        Log.e("Database", "Error during population of encounter details: $e")
+        delay(1000)
         _prepopulationState.value =
-            PrepopulationState.Error("Failed during prepopulation: ${e.message ?: "Unknown error"}")
+            PrepopulationState.Error("Unexpected error while prepopulating Pokémon: $e")
     }
 }
-

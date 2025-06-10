@@ -1,4 +1,4 @@
-{
+{"encounters": {
     "Route 1": [
         {
             "pokemon": {
@@ -89149,4 +89149,5 @@
     ],
     "Wyndon": [],
     "Wyndon Stadium": []
+}
 }

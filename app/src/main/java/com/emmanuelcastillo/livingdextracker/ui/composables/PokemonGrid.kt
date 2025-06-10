@@ -2,6 +2,7 @@ package com.emmanuelcastillo.livingdextracker.ui.composables
 
 import GridCell
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -52,6 +55,7 @@ fun PokemonGrid(
                 var isCaptured = copyCapturedPokemonSet.any { it.second == pokemonGameEntryId }
 
                 val cellOnClick = {
+                    Log.d("GridCell", "cellOnClick -> pokemon/$gameId/$pokemonGameEntryId")
                     navController.navigate("pokemon/$gameId/$pokemonGameEntryId")
                 }
 
